@@ -1,18 +1,15 @@
 // Separo a edição do perfil e dos sistemas das consultas que montam a página.
 import { ref, nextTick } from "vue"
-import type { useDadosPerfil } from "./useDadosPerfil.ts"
+import type { DadosPerfil } from "./useDadosPerfil.ts"
 import { apiController as api, record, query } from "../controller/api.controller.ts"
 import { sessao } from "../controller/usuario.controller.ts"
 import { privado, avatarUsuario, criarAvatar } from "../controller/comunidade.controller.ts"
 
-export function useEdicaoPerfil(perfil: ReturnType<typeof useDadosPerfil>) {
+export function useEdicaoPerfil(perfil: DadosPerfil) {
     const { user, mine, userId, load, loadSystems, executar, mensagem } = perfil
     const avatars = ref([])
-
     const editing = ref(false)
-
     const formulario = ref({ nome: "", biografia: "", privacidade: "publico", avatar: "" })
-
     const systemName = ref("")
 
     // Copio os dados para o formulário para só salvar as alterações após a confirmação.

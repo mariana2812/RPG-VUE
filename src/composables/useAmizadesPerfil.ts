@@ -1,29 +1,23 @@
 // Aqui eu reúno as ações de seguir, aceitar solicitações e seguir de volta.
 import { computed } from "vue"
-import type { useDadosPerfil } from "./useDadosPerfil.ts"
+import type { DadosPerfil } from "./useDadosPerfil.ts"
 import { apiController as api, record } from "../controller/api.controller.ts"
 import { privado } from "../controller/comunidade.controller.ts"
 import { criarAmizadeMutua } from "../controller/amizade.controller.ts"
 import { responderSolicitacao } from "./useNotificacoes.ts"
 
-export function useAmizadesPerfil(perfil: ReturnType<typeof useDadosPerfil>) {
+export function useAmizadesPerfil(perfil: DadosPerfil) {
     const { user, userId, id, relations, pair, friendship, following, follower, load, executar, mensagem } =
         perfil
-    const friendLabel = computed(() =>
-        friendship.value
-            ? "Remover amizade"
-            : following.value?.status === "pending"
-              ? "Cancelar solicitação"
-              : following.value?.status === "following"
-                ? "Deixar de seguir"
-                : follower.value?.status === "pending"
-                  ? "Solicitação recebida: veja no seu perfil"
-                  : follower.value?.status === "following"
-                    ? "Seguir de volta"
-                    : privado(user.value)
-                      ? "Solicitar para seguir"
-                      : "Seguir"
-    )
+    const friendLabel = computed(() => {
+        if (friendship.value) return "Remover amizade"
+        if (following.value?.status === "pending") return "Cancelar solicitação"
+        if (following.value?.status === "following") return "Deixar de seguir"
+        if (follower.value?.status === "pending") return "Solicitação recebida: veja no seu perfil"
+        if (follower.value?.status === "following") return "Seguir de volta"
+        if (privado(user.value)) return "Solicitar para seguir"
+        return "Seguir"
+    })
 
     function toggleFriend() {
         executar(async () => {

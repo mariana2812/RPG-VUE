@@ -4,7 +4,8 @@ import { ref, computed, onMounted, nextTick, watch } from "vue"
 import { useRoute } from "vue-router"
 import { apiController as api, query, record } from "../controller/api.controller.ts"
 import { sessao } from "../controller/usuario.controller.ts"
-import { amigosDe, nomeUsuario, privado } from "../controller/comunidade.controller.ts"
+import { nomeUsuario } from "../controller/comunidade.controller.ts"
+import { carregarMural } from "../controller/mural.controller.ts"
 import { mestreId, aberta } from "../controller/campanha.controller.ts"
 import { useOperacaoAssincrona } from "../composables/useOperacaoAssincrona.ts"
 import Icone from "../components/Icone.vue"
@@ -53,33 +54,9 @@ watch(() => route.hash, focusHash)
 async function loadPosts() {
     loading.value = true
     try {
-        const [data, relations] = await Promise.all([api.get("/blog"), api.get("/friends")])
-        if (!Array.isArray(data)) throw new Error("A rota do blog precisa retornar uma lista.")
-        friends.value = amigosDe(relations, userId)
-        const ids = [...new Set(data.map(post => post.userId ?? post.user?.id).filter(id => id != null))]
-        const authors = new Map(
-            await Promise.all(
-                ids.map(async id => {
-                    try {
-                        return [String(id), await api.get(record("users", id))] as const
-                    } catch {
-                        return [String(id), null] as const
-                    }
-                })
-            )
-        )
-        posts.value = data
-            .map(post => ({
-                ...post,
-                user: authors.get(String(post.userId ?? post.user?.id)) || post.user
-            }))
-            .filter(
-                post =>
-                    String(post.userId ?? post.user?.id) === userId ||
-                    !privado(post.user) ||
-                    friends.value.has(String(post.userId ?? post.user?.id))
-            )
-            .reverse()
+        const mural = await carregarMural(userId)
+        posts.value = mural.posts
+        friends.value = mural.friends
         await focusHash()
     } finally {
         loading.value = false
@@ -88,29 +65,35 @@ async function loadPosts() {
 async function carregar(estado, caminho) {
     estado.value = await api.get(caminho)
 }
+async function carregarSistemas() {
+    const [sistemas, vinculos] = await Promise.all([
+        api.get("/systems"), api.get(query("userSystems", { userId }))
+    ])
+    systems.value = sistemas.filter(sistema =>
+        vinculos.some(vinculo => String(vinculo.systemId) === String(sistema.id))
+    )
+}
+async function carregarCampanhas() {
+    const [campanhas, membros] = await Promise.all([
+        api.get("/campaigns"), api.get(query("campaignMembers", { userId }))
+    ])
+    campaigns.value = campanhas
+    participations.value = membros
+}
 async function load() {
-    const results = await Promise.allSettled([
+    // Se uma consulta falhar, as outras partes da página ainda podem carregar.
+    const resultados = await Promise.allSettled([
         carregar(user, record("users", userId)),
         carregar(users, "/users"),
-        (async () => {
-            const [all, links] = await Promise.all([
-                api.get("/systems"),
-                api.get(query("userSystems", { userId }))
-            ])
-            systems.value = all.filter(item => links.some(link => String(link.systemId) === String(item.id)))
-        })(),
-        (async () => {
-            const [all, links] = await Promise.all([
-                api.get("/campaigns"),
-                api.get(query("campaignMembers", { userId }))
-            ])
-            campaigns.value = all
-            participations.value = links
-        })(),
+        carregarSistemas(),
+        carregarCampanhas(),
         loadPosts()
     ])
-    const errors = results.filter(result => result.status === "rejected").map(result => result.reason.message)
-    if (errors.length) mensagem.value = [...new Set(errors)].join(" ")
+    const erros = []
+    for (const resultado of resultados) {
+        if (resultado.status === "rejected") erros.push(resultado.reason.message)
+    }
+    if (erros.length) mensagem.value = [...new Set(erros)].join(" ")
 }
 function focusPost() {
     novaPublicacao.value?.focar()

@@ -16,29 +16,17 @@ export function useContatosMensagens(
     foiEncerrada: () => boolean
 ) {
     const route = useRoute()
-
     const userId = sessao.userId
-
     const contactsKey = "frontdContatosPerfil:" + userId
-
     const users = ref([])
-
     const friends = ref(new Set())
-
     const companions = ref(new Set())
-
     const openedProfiles = ref(lerIds(contactsKey))
-
     const communities = ref([])
-
     const members = ref([])
-
     const search = ref("")
-
     const filter = ref("todos")
-
     const queryText = computed(() => search.value.trim().toLowerCase())
-
     const allowed = user =>
         String(user.id) !== userId &&
         (contatosComConversa.value.has(String(user.id)) ||
@@ -69,7 +57,6 @@ export function useContatosMensagens(
     ])
 
     const communityIds = computed(() => new Set(communities.value.map(item => String(item.id))))
-
     const groupParticipants = community => {
         const ids = participantesDaComunidade(community, members.value)
         return users.value.filter(item => ids.has(String(item.id)))

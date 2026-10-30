@@ -29,7 +29,6 @@ Para mudar o endereço, copie `.env.example` para `.env` e ajuste `VITE_API_URL`
 
 ```powershell
 npm.cmd run build
-npm.cmd run format:check
 ```
 
 O build é gerado em `dist`. A hospedagem deve redirecionar as rotas para `index.html`.

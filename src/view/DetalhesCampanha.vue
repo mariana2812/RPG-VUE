@@ -1,19 +1,18 @@
 <script setup lang="ts">
 // Aqui eu coordeno as ações da campanha; o resumo e o mural ficam em componentes separados.
-import type { FormularioCampanha } from "../interfaces/campanha.interface.ts"
-import { ref, computed, onMounted, nextTick } from "vue"
+import { ref, computed, onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { apiController as api, query, record } from "../controller/api.controller.ts"
 import { sessao } from "../controller/usuario.controller.ts"
 import { nomeUsuario } from "../controller/comunidade.controller.ts"
-import { mestreId, aberta, excluirCampanha, validarCampanha } from "../controller/campanha.controller.ts"
+import { mestreId, aberta, excluirCampanha } from "../controller/campanha.controller.ts"
 import { confirmarExclusao } from "../composables/useModal.ts"
 import { useOperacaoAssincrona } from "../composables/useOperacaoAssincrona.ts"
-import { useImagem } from "../composables/useImagem.ts"
 import ResumoCampanha from "../components/campanha/ResumoCampanha.vue"
 import MuralCampanha from "../components/campanha/MuralCampanha.vue"
 import AvatarUsuario from "../components/AvatarUsuario.vue"
-import CamposCampanha from "../components/CamposCampanha.vue"
+import FormularioEdicaoCampanha from "../components/campanha/FormularioEdicaoCampanha.vue"
+const edicaoCampanha = ref<InstanceType<typeof FormularioEdicaoCampanha> | null>(null)
 const rota = useRoute()
 const roteador = useRouter()
 const id = String(rota.query.id ?? "")
@@ -23,15 +22,7 @@ const usuarios = ref([])
 const inscricoes = ref([])
 const publicacoes = ref([])
 const texto = ref("")
-const editando = ref(false)
-const formulario = ref<FormularioCampanha>({ nome: "", sistema: "", descricao: "", maxJogadores: 5 })
 const { carregando, mensagem, executar } = useOperacaoAssincrona()
-const {
-    imagem: previa,
-    lendo: lendoImagem,
-    selecionar: selecionarImagem,
-    limpar: limparImagem
-} = useImagem(mensagem)
 const ehMestre = computed(() => String(mestreId(campanha.value)) === userId)
 const inscricao = computed(() => inscricoes.value.find(item => String(item.userId) === userId))
 const participa = computed(() => ehMestre.value || !!inscricao.value)
@@ -110,38 +101,11 @@ function entrarOuSair() {
         await carregarCampanha()
     })
 }
-async function editarCampanha() {
-    formulario.value = {
-        nome: campanha.value.nome || "",
-        sistema: campanha.value.sistema || campanha.value.sistemaNome || "",
-        descricao: campanha.value.descricao || "",
-        maxJogadores: campanha.value.maxJogadores || 5,
-        removerCapa: false
-    }
-    limparImagem(campanha.value.capa || "")
-    editando.value = true
-    await nextTick()
-    document.getElementById("editarNome")?.focus()
+function editarCampanha() {
+    edicaoCampanha.value?.abrir()
 }
-async function selecionarCapa(file) {
-    if (await selecionarImagem(file)) formulario.value.removerCapa = false
-}
-function removerCapa() {
-    if (formulario.value.removerCapa) limparImagem()
-}
-function salvarCampanha() {
+function campanhaSalva() {
     executar(async () => {
-        await verificarMestre()
-        const relations = await api.get(query("campaignMembers", { campaignId: id }))
-        const count = new Set(
-            relations.filter(item => String(item.userId) !== userId).map(item => String(item.userId))
-        ).size
-        const dados = validarCampanha(formulario.value, Math.max(2, count))
-        await api.patch(record("campaigns", id), {
-            ...dados,
-            capa: formulario.value.removerCapa ? "" : previa.value
-        })
-        editando.value = false
         await carregarCampanha()
         mensagem.value = "Campanha atualizada."
     })
@@ -190,22 +154,7 @@ onMounted(() => {
             @excluir="excluir"
             @entrar-ou-sair="entrarOuSair"
         />
-        <section v-if="editando" id="editarCampanha" class="card">
-            <h2>Editar campanha</h2>
-            <form id="formEditarCampanha" class="formulario" @submit.prevent="salvarCampanha">
-                <CamposCampanha
-                    v-model="formulario"
-                    edit
-                    :preview="previa"
-                    @image="selecionarCapa"
-                    @remove-image="removerCapa"
-                />
-                <button type="submit" class="botao" :disabled="carregando || lendoImagem">
-                    Salvar alterações
-                </button>
-                <button type="button" class="botao-secundario" @click="editando = false">Cancelar</button>
-            </form>
-        </section>
+        <FormularioEdicaoCampanha ref="edicaoCampanha" :campanha="campanha" :bloqueado="carregando" @salva="campanhaSalva" />
         <section class="card">
             <h2>Participantes</h2>
             <div id="participantes" class="lista">

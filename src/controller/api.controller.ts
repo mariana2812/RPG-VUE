@@ -1,55 +1,47 @@
-// Centralizo a conexão com o servidor para não repetir as requisições em cada tela.
+// Uso Axios, como no exemplo da aula, para reunir as chamadas ao servidor.
+import axios from "axios"
+
 export const API = {
     baseUrl: import.meta.env?.VITE_API_URL || "http://localhost:3001",
     login: "/login",
     cadastro: "/register"
 }
+const servidor = axios.create({ baseURL: API.baseUrl })
 
-async function requisicao<T>(caminho: string, opcoes: RequestInit = {}): Promise<T> {
-    const headers = new Headers(opcoes.headers)
-    if (opcoes.body) headers.set("Content-Type", "application/json")
-    // Envio o token nas consultas aos dados, mas login e cadastro não precisam dele.
+async function requisicao<T>(method: string, url: string, data?: object): Promise<T> {
     const token = localStorage.getItem("accessToken")
-    if (token && caminho !== API.login && caminho !== API.cadastro)
-        headers.set("Authorization", "Bearer " + token)
-
-    let resposta: Response
+    const headers = {}
+    if (token && url !== API.login && url !== API.cadastro)
+        headers["Authorization"] = "Bearer " + token
     try {
-        resposta = await fetch(API.baseUrl + caminho, { ...opcoes, headers })
-    } catch {
-        throw new Error(
-            "Não foi possível conectar ao servidor em " +
-                API.baseUrl +
-                ". Verifique se o JSON Server está ligado."
-        )
-    }
-    // Leio a resposta antes de converter para JSON, pois uma exclusão pode vir sem conteúdo.
-    const texto = await resposta.text()
-    let dados = null
-    try {
-        dados = texto ? JSON.parse(texto) : null
-    } catch {
-        if (resposta.ok) throw new Error("O servidor retornou uma resposta inválida: era esperado JSON.")
-        dados = texto
-    }
-    if (!resposta.ok) {
-        const mensagem = typeof dados === "string" ? dados : dados?.message
-        throw Object.assign(new Error(mensagem || "Erro na requisição: " + resposta.status), {
-            status: resposta.status
+        const resposta = await servidor.request({ method, url, data, headers, responseType: "text" })
+        // Uma exclusão pode retornar uma resposta vazia.
+        return resposta.data ? JSON.parse(resposta.data) : null
+    } catch (erro) {
+        if (erro instanceof SyntaxError)
+            throw new Error("O servidor retornou uma resposta inválida: era esperado JSON.")
+        if (!axios.isAxiosError(erro)) throw erro
+        if (!erro.response)
+            throw new Error("Não foi possível conectar ao servidor em " + API.baseUrl)
+        let detalhe = erro.response.data
+        try { detalhe = JSON.parse(detalhe) } catch { /* A mensagem também pode vir em texto. */ }
+        const mensagem = typeof detalhe === "string" ? detalhe : detalhe?.message
+        throw Object.assign(new Error(mensagem || "Erro na requisição: " + erro.response.status), {
+            status: erro.response.status
         })
     }
-    return dados as T
 }
 
 export const apiController = {
-    get: <T = any>(caminho: string) => requisicao<T>(caminho),
-    post: <T = any>(caminho: string, dados: object) =>
-        requisicao<T>(caminho, { method: "POST", body: JSON.stringify(dados) }),
-    patch: <T = any>(caminho: string, dados: object) =>
-        requisicao<T>(caminho, { method: "PATCH", body: JSON.stringify(dados) }),
-    remove: (caminho: string) => requisicao<null>(caminho, { method: "DELETE" })
+    async get<T = any>(url: string) { return requisicao<T>("GET", url) },
+    async post<T = any>(url: string, dados: object) { return requisicao<T>("POST", url, dados) },
+    async patch<T = any>(url: string, dados: object) { return requisicao<T>("PATCH", url, dados) },
+    async remove(url: string) { return requisicao<null>("DELETE", url) }
 }
 
-export const query = (colecao: string, filtros: Record<string, string> = {}) =>
-    "/" + colecao + "?" + new URLSearchParams(filtros)
-export const record = (colecao: string, id: string | number) => "/" + colecao + "/" + encodeURIComponent(id)
+export function query(colecao: string, filtros: Record<string, string> = {}) {
+    return "/" + colecao + "?" + new URLSearchParams(filtros)
+}
+export function record(colecao: string, id: string | number) {
+    return "/" + colecao + "/" + encodeURIComponent(id)
+}

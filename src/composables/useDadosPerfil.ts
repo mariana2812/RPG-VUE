@@ -9,31 +9,18 @@ import { useOperacaoAssincrona } from "./useOperacaoAssincrona.ts"
 
 export function useDadosPerfil() {
     const route = useRoute()
-
     const userId = sessao.userId
-
     const id = String(route.query.id || userId)
-
     const mine = id === userId
-
     const user = ref(null)
-
     const relations = ref([])
-
     const people = ref([])
-
     const systems = ref([])
-
     const posts = ref([])
-
     const campaigns = ref([])
-
     const { carregando, mensagem, executar } = useOperacaoAssincrona()
-
     const pair = computed(() => relations.value.filter(item => relacaoEntre(item, userId, id)))
-
     const friendship = computed(() => pair.value.find(isAcceptedFriendRelation))
-
     const following = computed(() =>
         pair.value.find(item => String(item.userId) === userId && String(item.friendId) === id)
     )
@@ -43,7 +30,6 @@ export function useDadosPerfil() {
     )
 
     const visible = computed(() => mine || !privado(user.value) || !!friendship.value)
-
     const requests = computed(() =>
         relations.value.filter(
             item =>
@@ -77,8 +63,9 @@ export function useDadosPerfil() {
         const [person, friends] = await Promise.all([api.get(record("users", id)), api.get("/friends")])
         user.value = person
         relations.value = friends
-        if (visible.value) await Promise.all([loadSystems(), loadPosts(), loadCampaigns()])
-        else {
+        if (visible.value) {
+            await Promise.all([loadSystems(), loadPosts(), loadCampaigns()])
+        } else {
             systems.value = []
             posts.value = []
             campaigns.value = []
@@ -116,3 +103,6 @@ export function useDadosPerfil() {
         load
     }
 }
+
+// Este nome representa os dados que as funções de edição e amizade recebem.
+export type DadosPerfil = ReturnType<typeof useDadosPerfil>

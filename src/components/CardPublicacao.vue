@@ -1,26 +1,18 @@
 <script setup lang="ts">
 // Cada card cuida das curtidas, dos comentários e das ações daquela publicação.
-import { ref, computed, onMounted } from "vue"
+import { computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
-import { apiController as api, query, record } from "../controller/api.controller.ts"
-import { sessao } from "../controller/usuario.controller.ts"
 import { nomeUsuario, excluirPublicacao, editarPublicacao } from "../controller/comunidade.controller.ts"
 import { confirmarExclusao } from "../composables/useModal.ts"
-import { adicionarAviso } from "../composables/useNotificacoes.ts"
-import { useOperacaoAssincrona } from "../composables/useOperacaoAssincrona.ts"
+import type { Publicacao } from "../interfaces/comunidade.interface.ts"
+import type { Usuario } from "../interfaces/usuario.interface.ts"
+import { useInteracoesPublicacao } from "../composables/useInteracoesPublicacao.ts"
 import AvatarUsuario from "./AvatarUsuario.vue"
-const props = defineProps({ post: { type: Object, required: true }, currentUser: Object })
+import ComentariosPublicacao from "./ComentariosPublicacao.vue"
+const props = defineProps<{ post: Publicacao; currentUser?: Usuario }>()
+const { likes, comments, people, open, text, carregando, mensagem, executar, mine, liked, loadCounts, like, toggleComments, comment } = useInteracoesPublicacao(props)
 const emit = defineEmits(["changed"])
 const router = useRouter()
-const userId = sessao.userId
-const likes = ref([])
-const comments = ref([])
-const people = ref(new Map())
-const open = ref(false)
-const text = ref("")
-const { carregando, mensagem, executar } = useOperacaoAssincrona()
-const mine = computed(() => String(props.post.userId ?? props.post.user?.id) === userId)
-const liked = computed(() => likes.value.some(item => String(item.userId) === userId))
 const date = computed(() => {
     const value = new Date(props.post.created_at)
     return !props.post.created_at || Number.isNaN(value.getTime())
@@ -33,61 +25,6 @@ const date = computed(() => {
           })
 })
 const validImage = computed(() => /^data:image\/(png|jpeg|webp);base64,/.test(props.post.imagem || ""))
-async function loadCounts() {
-    const [reactions, replies] = await Promise.all([
-        api.get(query("likes", { postId: props.post.id })),
-        api.get(query("comments", { postId: props.post.id }))
-    ])
-    likes.value = reactions
-    comments.value = replies
-}
-function like() {
-    executar(async () => {
-        const current = await api.get(query("likes", { postId: props.post.id, userId }))
-        if (current[0]) await api.remove(record("likes", current[0].id))
-        else {
-            await api.post("/likes", {
-                postId: String(props.post.id),
-                userId: props.currentUser?.id ?? userId
-            })
-            if (!mine.value) adicionarAviso("Nova curtida", "Sua publicação recebeu uma curtida.", "success")
-        }
-        likes.value = await api.get(query("likes", { postId: props.post.id }))
-    })
-}
-async function loadComments() {
-    comments.value = await api.get(query("comments", { postId: props.post.id }))
-    const ids = [...new Set(comments.value.map(item => String(item.userId)))]
-    await Promise.all(
-        ids.map(async id => {
-            if (people.value.has(id)) return
-            try {
-                people.value.set(id, await api.get(record("users", id)))
-            } catch {
-                people.value.set(id, null)
-            }
-        })
-    )
-}
-function toggleComments() {
-    open.value = !open.value
-    if (open.value) executar(loadComments)
-}
-function comment() {
-    executar(async () => {
-        const conteudo = text.value.trim()
-        if (!conteudo) return
-        await api.post("/comments", {
-            postId: String(props.post.id),
-            userId: props.currentUser?.id ?? userId,
-            conteudo,
-            created_at: new Date().toISOString()
-        })
-        if (!mine.value) adicionarAviso("Novo comentário", "Alguém comentou na sua publicação.", "info")
-        text.value = ""
-        await loadComments()
-    })
-}
 function edit() {
     executar(async () => {
         await editarPublicacao(props.post.id)
@@ -170,25 +107,6 @@ onMounted(() => executar(loadCounts))
             </template>
         </div>
         <p class="feed-message" role="status">{{ mensagem }}</p>
-        <div class="comments-area" :class="{ open }">
-            <div class="comments-list">
-                <div v-if="!comments.length" class="empty-small">Nenhum comentário ainda.</div>
-                <div v-for="reply in comments" :key="reply.id" class="comment">
-                    <AvatarUsuario
-                        :user="people.get(String(reply.userId))"
-                        style-name="adventurer"
-                        class="comment-avatar"
-                    />
-                    <div class="comment-body">
-                        <strong>{{ nomeUsuario(people.get(String(reply.userId))) }}</strong>
-                        <p>{{ reply.conteudo }}</p>
-                    </div>
-                </div>
-            </div>
-            <form class="comment-form" @submit.prevent="comment">
-                <input v-model="text" type="text" placeholder="Escreva um comentário..." maxlength="500" />
-                <button type="submit" class="send-comment" :disabled="carregando">Enviar</button>
-            </form>
-        </div>
+        <ComentariosPublicacao v-model="text" :comments="comments" :people="people" :open="open" :carregando="carregando" @enviar="comment" />
     </article>
 </template>
