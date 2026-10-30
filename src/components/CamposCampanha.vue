@@ -1,23 +1,46 @@
-<script setup>
-import Input from "./input/Input.vue"
-const form = defineModel({ required: true })
-defineProps({ edit: Boolean, preview: String })
+<script setup lang="ts">
+// Reutilizo estes campos tanto para criar quanto para editar uma campanha.
+import type { FormularioCampanha } from "../interfaces/campanha.interface.ts"
+import CampoFormulario from "./CampoFormulario.vue"
+const form = defineModel<FormularioCampanha>({ required: true })
+interface CamposCampanhaProps {
+    edit?: boolean
+    preview?: string
+}
+defineProps<CamposCampanhaProps>()
 const emit = defineEmits(["image", "remove-image"])
-const campos = [
-    ["nome", "editarNome", "Nome", { maxlength: 100 }],
-    ["sistema", "editarSistema", "Sistema", { maxlength: 100, placeholder: "Ex: D&D 5e" }],
-    ["descricao", "editarDescricao", "Descrição", { maxlength: 5000, multiline: true }],
-    ["maxJogadores", "editarLimite", "Quantidade máxima de jogadores", { type: "number", min: 2, max: 20 }]
-]
 </script>
 <template>
-    <Input
-        v-for="[nome, idEdicao, label, opcoes] in campos"
-        :key="nome"
-        :id="edit ? idEdicao : nome"
-        v-model="form[nome]"
-        :label="label"
-        v-bind="opcoes"
+    <CampoFormulario
+        :id="edit ? 'editarNome' : 'nome'"
+        v-model="form.nome"
+        label="Nome"
+        :maxlength="100"
+        required
+    />
+    <CampoFormulario
+        :id="edit ? 'editarSistema' : 'sistema'"
+        v-model="form.sistema"
+        label="Sistema"
+        :maxlength="100"
+        placeholder="Ex: D&D 5e"
+        required
+    />
+    <CampoFormulario
+        :id="edit ? 'editarDescricao' : 'descricao'"
+        v-model="form.descricao"
+        label="Descrição"
+        :maxlength="5000"
+        multiline
+        required
+    />
+    <CampoFormulario
+        :id="edit ? 'editarLimite' : 'maxJogadores'"
+        v-model="form.maxJogadores"
+        label="Quantidade máxima de jogadores"
+        type="number"
+        :min="2"
+        :max="20"
         required
     />
     <div class="campo">
@@ -26,7 +49,7 @@ const campos = [
             :id="edit ? 'editarCapa' : 'capa'"
             type="file"
             accept="image/jpeg,image/png,image/webp"
-            @change="emit('image', $event.target.files[0])"
+            @change="emit('image', ($event.target as HTMLInputElement).files?.[0])"
         />
         <img v-if="preview" id="previaCapa" :src="preview" class="previa-capa" alt="Prévia da capa" />
     </div>

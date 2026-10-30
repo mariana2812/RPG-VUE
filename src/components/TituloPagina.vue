@@ -1,5 +1,11 @@
-<script setup>
-defineProps(["label", "title", "description"])
+<script setup lang="ts">
+// Reutilizo este cabeçalho para manter os títulos das páginas no mesmo padrão.
+interface TituloPaginaProps {
+    label: string
+    title: string
+    description?: string
+}
+defineProps<TituloPaginaProps>()
 </script>
 <template>
     <div class="titulo-pagina">

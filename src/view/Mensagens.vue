@@ -1,47 +1,47 @@
-<script setup>
+<script setup lang="ts">
+// Aqui eu controlo a conversa selecionada e a atualização das mensagens.
 import { ref, computed, onMounted, onUnmounted, nextTick } from "vue"
 import { useRoute } from "vue-router"
-import { serviceController as api } from "../controller/service.controller.js"
-import { sessao } from "../controller/user.controller.js"
+import { apiController as api } from "../controller/api.controller.ts"
+import { sessao } from "../controller/usuario.controller.ts"
 import {
     nomeUsuario,
     privado,
     amigosDe,
     participantesDaComunidade,
     participaDaComunidade
-} from "../controller/comunidade.controller.js"
+} from "../controller/comunidade.controller.ts"
 import {
     contatosComConversa,
     atualizarResumoMensagens,
     marcarLidas,
     lerIds
-} from "../composables/useNotificacoes.js"
-import { useAcao } from "../composables/useAcao.js"
+} from "../composables/useNotificacoes.ts"
+import { useOperacaoAssincrona } from "../composables/useOperacaoAssincrona.ts"
 import TituloPagina from "../components/TituloPagina.vue"
-import Avatar from "../components/Avatar.vue"
+import ListaContatos from "../components/mensagens/ListaContatos.vue"
 import Icone from "../components/Icone.vue"
-import ContadorMensagens from "../components/ContadorMensagens.vue"
-const route = useRoute(),
-    userId = sessao.userId,
-    contactsKey = "frontdContatosPerfil:" + userId
-const users = ref([]),
-    friends = ref(new Set()),
-    companions = ref(new Set()),
-    openedProfiles = ref(lerIds(contactsKey))
-const communities = ref([]),
-    members = ref([]),
-    selected = ref(null),
-    messages = ref([])
-const search = ref(""),
-    filter = ref("todos"),
-    text = ref(""),
-    chat = ref(null),
-    loading = ref(false),
-    refreshing = ref(false)
-const { carregando, mensagem, executar } = useAcao()
-let timer,
-    version = 0,
-    disposed = false
+const route = useRoute()
+const userId = sessao.userId
+const contactsKey = "frontdContatosPerfil:" + userId
+const users = ref([])
+const friends = ref(new Set())
+const companions = ref(new Set())
+const openedProfiles = ref(lerIds(contactsKey))
+const communities = ref([])
+const members = ref([])
+const selected = ref(null)
+const messages = ref([])
+const search = ref("")
+const filter = ref("todos")
+const text = ref("")
+const chat = ref<HTMLElement | null>(null)
+const loading = ref(false)
+const refreshing = ref(false)
+const { carregando, mensagem, executar } = useOperacaoAssincrona()
+let timer
+let version = 0
+let disposed = false
 const queryText = computed(() => search.value.trim().toLowerCase())
 const allowed = user =>
     String(user.id) !== userId &&
@@ -68,7 +68,7 @@ const conversas = computed(() => [
     ...contacts.value.map(data => ({ type: "usuario", data })),
     ...groups.value.map(data => ({ type: "comunidade", data }))
 ])
-const selectedCommunityIds = () => new Set(communities.value.map(item => String(item.id)))
+const communityIds = computed(() => new Set(communities.value.map(item => String(item.id))))
 const groupParticipants = community => {
     const ids = participantesDaComunidade(community, members.value)
     return users.value.filter(item => ids.has(String(item.id)))
@@ -80,8 +80,6 @@ const detail = computed(() => {
     const people = groupParticipants(selected.value.data)
     return `${people.length} participante(s): ${people.map(user => (String(user.id) === userId ? "Você" : nomeUsuario(user))).join(", ")}`
 })
-const isSelected = (type, id) =>
-    selected.value?.type === type && String(selected.value.data.id) === String(id)
 const author = id =>
     String(id) === userId ? "Você" : nomeUsuario(users.value.find(item => String(item.id) === String(id)))
 async function load() {
@@ -97,7 +95,7 @@ async function load() {
     communities.value.forEach(group => groupParticipants(group).forEach(person => ids.add(String(person.id))))
     ids.delete(userId)
     companions.value = ids
-    atualizarResumoMensagens(history, selectedCommunityIds())
+    atualizarResumoMensagens(history, communityIds.value)
     const group = communities.value.find(item => String(item.id) === String(route.query.comunidade))
     if (group) {
         await select("comunidade", group)
@@ -122,14 +120,16 @@ async function select(type, data) {
     loading.value = true
     await loadChat(true)
 }
+// Confiro se a conversa ainda é a mesma para não misturar respostas de consultas anteriores.
 async function loadChat(forceScroll = false) {
     if (!selected.value) return
-    const conversation = selected.value,
-        current = ++version
+    const conversation = selected.value
+    const current = ++version
     const id = String(conversation.data.id)
+    const isCurrent = () => !disposed && selected.value === conversation && current === version
     try {
         const history = await api.get("/messages")
-        if (disposed || selected.value !== conversation || current !== version) return
+        if (!isCurrent()) return
         const atEnd =
             !chat.value || chat.value.scrollHeight - chat.value.scrollTop - chat.value.clientHeight < 40
         messages.value = history
@@ -140,18 +140,12 @@ async function loadChat(forceScroll = false) {
                       ((String(item.senderId) === userId && String(item.receiverId) === id) ||
                           (String(item.senderId) === id && String(item.receiverId) === userId))
             )
-            .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-        atualizarResumoMensagens(history, selectedCommunityIds())
+            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+        atualizarResumoMensagens(history, communityIds.value)
         marcarLidas(messages.value)
         loading.value = false
         await nextTick()
-        if (
-            !disposed &&
-            selected.value === conversation &&
-            current === version &&
-            chat.value &&
-            (atEnd || forceScroll)
-        )
+        if (isCurrent() && chat.value && (atEnd || forceScroll))
             chat.value.scrollTop = chat.value.scrollHeight
     } finally {
         if (current === version) loading.value = false
@@ -159,29 +153,22 @@ async function loadChat(forceScroll = false) {
 }
 function send() {
     executar(async () => {
-        const conteudo = text.value.trim(),
-            conversation = selected.value
+        const conteudo = text.value.trim()
+        const conversation = selected.value
         if (!conversation || !conteudo) return
-        let data
-        if (conversation.type === "comunidade") {
-            if (!member(conversation.data)) throw new Error("Você não participa desta comunidade.")
-            data = {
-                communityId: conversation.data.id,
-                senderId: userId,
-                conteudo,
-                created_at: new Date().toISOString()
-            }
-        } else {
-            if (!allowed(conversation.data))
-                throw new Error("Abra o perfil do jogador para iniciar uma conversa.")
-            data = {
-                senderId: userId,
-                receiverId: conversation.data.id,
-                conteudo,
-                created_at: new Date().toISOString()
-            }
-        }
-        await api.post("/messages", data)
+        const community = conversation.type === "comunidade"
+        if (community && !member(conversation.data)) throw new Error("Você não participa desta comunidade.")
+        if (!community && !allowed(conversation.data))
+            throw new Error("Abra o perfil do jogador para iniciar uma conversa.")
+        const destino = community
+            ? { communityId: conversation.data.id }
+            : { receiverId: conversation.data.id }
+        await api.post("/messages", {
+            ...destino,
+            senderId: userId,
+            conteudo,
+            created_at: new Date().toISOString()
+        })
         if (disposed) return
         mensagem.value = `Mensagem enviada para ${nomeUsuario(conversation.data)}.`
         if (selected.value === conversation && text.value.trim() === conteudo) text.value = ""
@@ -219,62 +206,13 @@ onUnmounted(() => {
         <TituloPagina label="CONVERSAS" title="Mensagens" />
         <p class="mensagem" role="status">{{ mensagem }}</p>
         <section class="mensagens-layout">
-            <aside class="painel-contatos">
-                <RouterLink class="nova-conversa" to="/descobrir">
-                    <Icone name="user-plus" />
-                    Encontrar jogador
-                </RouterLink>
-                <label class="busca-contatos" for="buscarContato">Buscar contatos</label>
-                <input id="buscarContato" v-model="search" type="search" placeholder="Nome do jogador..." />
-                <nav class="filtros-contatos" aria-label="Filtrar contatos">
-                    <button
-                        v-for="[value, label] in [
-                            ['todos', 'Todos'],
-                            ['amigos', 'Amigos'],
-                            ['comunidade', 'Comunidades']
-                        ]"
-                        :key="value"
-                        type="button"
-                        :data-filtro="value"
-                        :aria-pressed="filter === value"
-                        @click="filter = value"
-                    >
-                        {{ label }}
-                    </button>
-                </nav>
-                <div id="contatos" class="contatos">
-                    <button
-                        v-for="{ type, data } in conversas"
-                        :key="type + '-' + data.id"
-                        type="button"
-                        class="contato"
-                        :class="{
-                            ativo: isSelected(type, data.id),
-                            'contato-comunidade': type === 'comunidade'
-                        }"
-                        :title="type === 'comunidade' ? 'Chat da comunidade ' + data.nome : nomeUsuario(data)"
-                        :aria-pressed="isSelected(type, data.id)"
-                        @click="executar(() => select(type, data))"
-                    >
-                        <span v-if="type === 'comunidade'" class="avatar avatar-comunidade" aria-hidden="true"
-                            >#</span
-                        >
-                        <Avatar v-else :user="data" class="avatar" />
-                        <span>{{ type === "comunidade" ? data.nome : nomeUsuario(data) }}</span>
-                        <ContadorMensagens :type="type" :id="data.id" />
-                    </button>
-                    <p v-if="!conversas.length" class="contatos-vazio">
-                        {{
-                            search
-                                ? "Nenhuma conversa encontrada."
-                                : filter === "comunidade"
-                                  ? "Você ainda não participa de comunidades."
-                                  : "Nenhum contato nesta lista."
-                        }}
-                    </p>
-                </div>
-                <RouterLink class="contatos-comunidades" to="/comunidades">Explorar comunidades</RouterLink>
-            </aside>
+            <ListaContatos
+                v-model:search="search"
+                v-model:filter="filter"
+                :conversas="conversas"
+                :selected="selected"
+                @selecionar="(type, data) => executar(() => select(type, data))"
+            />
             <section class="chat">
                 <header class="chat-cabecalho">
                     <h3 id="nomeContato">

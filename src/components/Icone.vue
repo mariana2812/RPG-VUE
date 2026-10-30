@@ -1,4 +1,5 @@
-<script setup>
+<script setup lang="ts">
+// Relaciono os nomes usados no projeto aos ícones da biblioteca.
 import {
     Hash,
     Compass,
@@ -23,7 +24,10 @@ import {
     ArrowUpRight,
     UsersRound
 } from "lucide-vue-next"
-defineProps({ name: { type: String, required: true } })
+interface IconeProps {
+    name: string
+}
+defineProps<IconeProps>()
 const icons = {
     hash: Hash,
     compass: Compass,

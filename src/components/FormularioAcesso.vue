@@ -1,23 +1,32 @@
-<script setup>
+<script setup lang="ts">
+// A prop cadastro define se este formulário vai criar uma conta ou fazer login.
 import { reactive } from "vue"
 import { useRouter } from "vue-router"
-import Form from "./Form.vue"
-import Input from "./input/Input.vue"
-import { useAcao } from "../composables/useAcao.js"
-import { userController, salvarSessao } from "../controller/user.controller.js"
+import FormularioBase from "./FormularioBase.vue"
+import CampoFormulario from "./CampoFormulario.vue"
+import { useOperacaoAssincrona } from "../composables/useOperacaoAssincrona.ts"
+import { usuarioController, salvarSessao } from "../controller/usuario.controller.ts"
 
-const props = defineProps({ cadastro: Boolean })
+const props = defineProps<{ cadastro?: boolean }>()
 const router = useRouter()
+// O reactive mantém os valores dos campos ligados ao formulário.
 const dados = reactive({ email: "", password: "" })
-const { carregando, mensagem, executar } = useAcao()
+const { carregando, mensagem, executar } = useOperacaoAssincrona()
 
 function enviar() {
     executar(async () => {
         mensagem.value = props.cadastro ? "Criando conta..." : "Entrando..."
-        const resultado = await userController[props.cadastro ? "register" : "login"]({
+        const credenciais = {
             email: dados.email.trim(),
             password: dados.password
-        })
+        }
+        let resultado
+        if (props.cadastro) {
+            resultado = await usuarioController.register(credenciais)
+        } else {
+            resultado = await usuarioController.login(credenciais)
+        }
+        // Depois da resposta do servidor, guardo a sessão e abro a próxima página.
         salvarSessao(resultado)
         await router.push(props.cadastro ? "/perfil" : "/taverna")
     })
@@ -25,13 +34,13 @@ function enviar() {
 </script>
 
 <template>
-    <Form
+    <FormularioBase
         :title="cadastro ? 'Cadastro' : 'Login'"
         :button-label="cadastro ? 'Cadastrar' : 'Entrar'"
         :loading="carregando"
         @submit.prevent="enviar"
     >
-        <Input
+        <CampoFormulario
             id="email"
             v-model="dados.email"
             label="Email"
@@ -41,7 +50,7 @@ function enviar() {
             placeholder="Digite seu email"
             required
         />
-        <Input
+        <CampoFormulario
             id="senha"
             v-model="dados.password"
             label="Senha"
@@ -57,5 +66,5 @@ function enviar() {
             </RouterLink>
             <p id="message" role="status">{{ mensagem }}</p>
         </template>
-    </Form>
+    </FormularioBase>
 </template>

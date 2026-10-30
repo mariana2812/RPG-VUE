@@ -1,40 +1,32 @@
-<script setup>
+<script setup lang="ts">
+// Aqui eu organizo o mural e passo os dados para os componentes da Taverna.
 import { ref, computed, onMounted, nextTick, watch } from "vue"
 import { useRoute } from "vue-router"
-import { links } from "../routes/menu.js"
-import { serviceController as api, query, record } from "../controller/service.controller.js"
-import { sessao } from "../controller/user.controller.js"
-import { amigosDe, nomeUsuario, privado, mestreId, aberta } from "../controller/comunidade.controller.js"
-import { useAcao } from "../composables/useAcao.js"
-import { useImagem } from "../composables/useImagem.js"
-import { abrirModal } from "../composables/useModal.js"
+import { apiController as api, query, record } from "../controller/api.controller.ts"
+import { sessao } from "../controller/usuario.controller.ts"
+import { amigosDe, nomeUsuario, privado } from "../controller/comunidade.controller.ts"
+import { mestreId, aberta } from "../controller/campanha.controller.ts"
+import { useOperacaoAssincrona } from "../composables/useOperacaoAssincrona.ts"
 import Icone from "../components/Icone.vue"
-import Avatar from "../components/Avatar.vue"
-import Publicacao from "../components/Publicacao.vue"
-import SinoNotificacoes from "../components/SinoNotificacoes.vue"
-import ContadorMensagens from "../components/ContadorMensagens.vue"
-const route = useRoute(),
-    userId = sessao.userId
-const user = ref(null),
-    users = ref([]),
-    posts = ref([]),
-    campaigns = ref([]),
-    participations = ref([]),
-    systems = ref([]),
-    friends = ref(new Set())
-const search = ref(""),
-    text = ref(""),
-    system = ref(""),
-    loading = ref(false)
-const postInput = ref(null),
-    imageInput = ref(null)
-const { carregando, mensagem, executar } = useAcao()
-const {
-    imagem: image,
-    lendo: imageLoading,
-    selecionar: chooseImage,
-    limpar: limparImagem
-} = useImagem(mensagem)
+import CardPublicacao from "../components/CardPublicacao.vue"
+import CabecalhoTaverna from "../components/taverna/CabecalhoTaverna.vue"
+import ResumoPerfilTaverna from "../components/taverna/ResumoPerfilTaverna.vue"
+import PainelExploracao from "../components/taverna/PainelExploracao.vue"
+import MenuMovelTaverna from "../components/taverna/MenuMovelTaverna.vue"
+import FormularioPublicacao from "../components/taverna/FormularioPublicacao.vue"
+const novaPublicacao = ref<InstanceType<typeof FormularioPublicacao> | null>(null)
+const route = useRoute()
+const userId = sessao.userId
+const user = ref(null)
+const users = ref([])
+const posts = ref([])
+const campaigns = ref([])
+const participations = ref([])
+const systems = ref([])
+const friends = ref(new Set())
+const search = ref("")
+const loading = ref(false)
+const { carregando, mensagem, executar } = useOperacaoAssincrona()
 const openCampaigns = computed(() => campaigns.value.filter(aberta).slice(0, 4))
 const campaignCount = computed(
     () =>
@@ -57,6 +49,7 @@ async function focusHash() {
         document.getElementById(decodeURIComponent(route.hash.slice(1)))?.scrollIntoView({ block: "center" })
 }
 watch(() => route.hash, focusHash)
+// Busco os autores e filtro as publicações privadas conforme as amizades.
 async function loadPosts() {
     loading.value = true
     try {
@@ -68,9 +61,9 @@ async function loadPosts() {
             await Promise.all(
                 ids.map(async id => {
                     try {
-                        return [String(id), await api.get(record("users", id))]
+                        return [String(id), await api.get(record("users", id))] as const
                     } catch {
-                        return [String(id), null]
+                        return [String(id), null] as const
                     }
                 })
             )
@@ -120,182 +113,21 @@ async function load() {
     if (errors.length) mensagem.value = [...new Set(errors)].join(" ")
 }
 function focusPost() {
-    postInput.value?.scrollIntoView({ behavior: "smooth", block: "center" })
-    postInput.value?.focus({ preventScroll: true })
-}
-function toggleImage() {
-    if (image.value) {
-        limparImagem()
-        imageInput.value.value = ""
-    } else imageInput.value?.click()
-}
-async function chooseSystem() {
-    const name = await abrirModal({
-        titulo: "Qual é o sistema da aventura?",
-        mensagem: "Adicione um sistema à sua publicação. Deixe em branco para remover.",
-        campo: true,
-        valor: system.value,
-        confirmar: "Adicionar sistema"
-    })
-    if (name !== null) system.value = name.trim()
-}
-function publish() {
-    executar(async () => {
-        const conteudo = text.value.trim()
-        if (!conteudo) {
-            focusPost()
-            return
-        }
-        await api.post("/blog", {
-            userId: user.value?.id ?? userId,
-            imagem: image.value,
-            sistema: system.value,
-            user: { id: user.value?.id ?? userId },
-            conteudo,
-            created_at: new Date().toISOString()
-        })
-        text.value = system.value = ""
-        limparImagem()
-        if (imageInput.value) imageInput.value.value = ""
-        await loadPosts()
-    })
+    novaPublicacao.value?.focar()
 }
 onMounted(() => executar(load))
 </script>
 
 <template>
-    <nav class="guild-rail" aria-label="Atalhos">
-        <RouterLink class="guild-home" to="/taverna" title="FrontD">
-            <Icone name="dices" />
-            <span class="sr-only">FrontD</span>
-        </RouterLink>
-        <span class="rail-divider"></span>
-        <RouterLink
-            v-for="[path, name, icon] in links.filter(item =>
-                ['/taverna', '/campanhas', '/comunidades'].includes(item[0])
-            )"
-            :key="path"
-            :to="path"
-            :class="{ selected: path === '/taverna' }"
-            :title="path === '/taverna' ? 'A taverna' : name"
-        >
-            <Icone :name="icon" />
-            <span class="sr-only">{{ path === "/taverna" ? "A taverna" : name }}</span>
-        </RouterLink>
-        <RouterLink class="rail-add" to="/campanhas" title="Criar campanha">
-            <Icone name="plus" />
-            <span class="sr-only">Criar campanha</span>
-        </RouterLink>
-        <RouterLink class="rail-bottom" to="/configuracoes" title="Configurações">
-            <Icone name="settings" />
-            <span class="sr-only">Configurações</span>
-        </RouterLink>
-    </nav>
-
-    <header class="topbar">
-        <RouterLink to="/taverna" class="brand">
-            <span class="brand-emblem"><Icone name="dices" /></span>
-            <strong> Front<span>D</span> </strong>
-            <span class="brand-caption">A sua próxima aventura</span>
-        </RouterLink>
-        <div class="channel-title">
-            <Icone name="hash" />
-            <strong>taverna-geral</strong>
-            <span>O ponto de encontro dos aventureiros</span>
-        </div>
-        <div class="top-actions">
-            <button
-                id="atualizarFeed"
-                :disabled="carregando"
-                @click="executar(load)"
-                type="button"
-                title="Atualizar feed"
-                aria-label="Atualizar feed"
-            >
-                <Icone name="refresh-cw" />
-            </button>
-            <button
-                id="abrirMensagens"
-                @click="$router.push('/mensagens')"
-                type="button"
-                title="Mensagens"
-                aria-label="Mensagens"
-            >
-                <Icone name="message-circle" />
-                <ContadorMensagens />
-            </button>
-            <SinoNotificacoes />
-            <button
-                class="user-button"
-                @click="$router.push('/perfil')"
-                title="Meu perfil"
-                aria-label="Meu perfil"
-            >
-                <Avatar id="topAvatar" :user="user" style-name="adventurer" />
-            </button>
-        </div>
-    </header>
+    <CabecalhoTaverna :user="user" :carregando="carregando" @atualizar="executar(load)" />
 
     <main class="layout">
-        <aside class="left-sidebar">
-            <RouterLink class="sidebar-inbox" to="/mensagens">
-                <Icone name="messages-square" />
-                <span>
-                    Suas conversas
-                    <small>Mensagens diretas</small>
-                </span>
-                <Icone name="chevron-right" />
-                <ContadorMensagens />
-            </RouterLink>
-            <div class="sidebar-heading">SEU PONTO DE ENCONTRO</div>
-            <nav class="main-menu" aria-label="Navegação principal">
-                <RouterLink
-                    v-for="[path, name, icon] in links.slice(0, 5)"
-                    :key="path"
-                    :to="path"
-                    :class="{ active: path === '/taverna' }"
-                    :aria-current="path === '/taverna' ? 'page' : undefined"
-                >
-                    <Icone :name="icon" />
-                    {{ path === "/taverna" ? "taverna-geral" : name }}
-                    <ContadorMensagens v-if="path === '/mensagens'" />
-                </RouterLink>
-            </nav>
-            <div class="sidebar-heading">A PRÓXIMA SESSÃO</div>
-            <button id="createCampaignButton" @click="$router.push('/campanhas')" class="create-campaign">
-                <Icone name="plus" />
-                Criar campanha
-            </button>
-            <section class="profile-card">
-                <div class="profile-summary">
-                    <Avatar
-                        id="profileAvatar"
-                        :user="user"
-                        style-name="adventurer"
-                        class="profile-avatar"
-                        alt="Seu avatar"
-                    />
-                    <div class="profile-info">
-                        <h2 id="profileName">{{ user ? nomeUsuario(user) : "Carregando..." }}</h2>
-                        <p id="profileDescription">{{ user?.biografia || "" }}</p>
-                    </div>
-                    <RouterLink to="/perfil" title="Editar perfil"><Icone name="settings" /></RouterLink>
-                </div>
-                <div id="profileSystems" class="profile-systems">
-                    <span v-for="system in systems" :key="system.id">{{ system.nome }}</span>
-                </div>
-                <div class="profile-stats">
-                    <div>
-                        <strong id="campaignCount">{{ campaignCount }}</strong>
-                        <span>Campanhas</span>
-                    </div>
-                    <div>
-                        <strong id="friendCount">{{ friends.size }}</strong>
-                        <span>Amigos</span>
-                    </div>
-                </div>
-            </section>
-        </aside>
+        <ResumoPerfilTaverna
+            :user="user"
+            :systems="systems"
+            :campaign-count="campaignCount"
+            :friend-count="friends.size"
+        />
 
         <section class="feed-column">
             <header class="feed-header">
@@ -321,63 +153,12 @@ onMounted(() => executar(load))
                     />
                 </label>
             </div>
-            <section class="create-post" aria-label="Nova publicação">
-                <Avatar
-                    id="createPostAvatar"
-                    :user="user"
-                    style-name="adventurer"
-                    class="create-avatar"
-                    alt="Seu avatar"
-                />
-                <div class="create-content">
-                    <textarea
-                        id="postContent"
-                        ref="postInput"
-                        v-model="text"
-                        placeholder="Que história você traz para a taverna?"
-                        aria-label="Texto da publicação"
-                        maxlength="5000"
-                    ></textarea>
-                    <img
-                        v-if="image"
-                        :src="image"
-                        class="previa-publicacao"
-                        alt="Imagem selecionada para publicar"
-                    />
-                    <input
-                        ref="imageInput"
-                        type="file"
-                        accept="image/png,image/jpeg,image/webp"
-                        hidden
-                        @change="chooseImage($event.target.files[0])"
-                    />
-                    <div class="create-footer">
-                        <div class="create-tools">
-                            <button
-                                type="button"
-                                :title="image ? 'Remover imagem' : 'Adicionar imagem'"
-                                @click="toggleImage"
-                            >
-                                <Icone name="image" />
-                                <span>{{ image ? "Remover imagem" : "Imagem" }}</span>
-                            </button>
-                            <button type="button" title="Escolher sistema" @click="chooseSystem">
-                                <Icone name="dices" />
-                                <span>{{ system || "Sistema" }}</span>
-                            </button>
-                        </div>
-                        <button
-                            id="publishButton"
-                            :disabled="carregando || imageLoading"
-                            @click="publish"
-                            class="publish-button"
-                            type="button"
-                        >
-                            Publicar
-                        </button>
-                    </div>
-                </div>
-            </section>
+            <FormularioPublicacao
+                ref="novaPublicacao"
+                :user="user"
+                :bloqueado="carregando"
+                @publicada="executar(loadPosts)"
+            />
             <div class="mural-label">
                 <span>AO REDOR DA FOGUEIRA</span>
                 <span>Publicações recentes</span>
@@ -386,7 +167,7 @@ onMounted(() => executar(load))
             <div id="feed">
                 <div v-if="loading" class="loading">Carregando publicações...</div>
                 <template v-else>
-                    <Publicacao
+                    <CardPublicacao
                         v-for="post in filteredPosts"
                         :key="post.id"
                         :post="post"
@@ -409,93 +190,8 @@ onMounted(() => executar(load))
             </div>
         </section>
 
-        <aside class="right-sidebar">
-            <div class="right-heading">
-                <span>EXPLORAR</span>
-                <h2>Além da taverna</h2>
-            </div>
-            <section class="side-card">
-                <div class="side-title">
-                    <h3>
-                        <Icone name="swords" />
-                        Campanhas abertas
-                    </h3>
-                    <RouterLink to="/campanhas" title="Ver todas as campanhas">
-                        <Icone name="arrow-right" />
-                    </RouterLink>
-                </div>
-                <div id="openCampaigns">
-                    <RouterLink
-                        v-for="campaign in openCampaigns"
-                        :key="campaign.id"
-                        class="campaign-item"
-                        :class="{ 'sem-capa': !campaign.capa }"
-                        :to="{ path: '/campanha', query: { id: campaign.id } }"
-                    >
-                        <img v-if="campaign.capa" :src="campaign.capa" class="campaign-cover" alt="" />
-                        <strong>{{ campaign.nome }}</strong>
-                        <span>{{ campaign.sistema || campaign.sistemaNome }}</span>
-                        <small>
-                            {{ campaign.vagas != null ? campaign.vagas + " vaga(s)" : "Inscrições abertas" }}
-                        </small>
-                    </RouterLink>
-                    <div v-if="!openCampaigns.length" class="empty-small">Nenhuma campanha disponível.</div>
-                </div>
-            </section>
-            <section class="community-panel">
-                <div class="community-total">
-                    <Icone name="users" />
-                    <div>
-                        <strong id="onlineCount">{{ users.length }}</strong>
-                        <small>aventureiros na comunidade</small>
-                    </div>
-                    <RouterLink to="/descobrir" title="Ver jogadores">
-                        <Icone name="arrow-up-right" />
-                    </RouterLink>
-                </div>
-                <div id="communityPlayers" class="community-players">
-                    <RouterLink
-                        v-for="person in users.slice(0, 5)"
-                        :key="person.id"
-                        class="community-player"
-                        :to="{ path: '/perfil', query: { id: person.id } }"
-                    >
-                        <Avatar :user="person" />
-                        <span>{{ nomeUsuario(person) }}</span>
-                    </RouterLink>
-                </div>
-            </section>
-            <RouterLink class="explore-community" to="/comunidades">
-                <Icone name="users-round" />
-                <span>
-                    Encontre seu grupo
-                    <small>Explorar comunidades</small>
-                </span>
-                <Icone name="arrow-up-right" />
-            </RouterLink>
-            <p class="sidebar-credit">FrontD · Comunidade RPG</p>
-        </aside>
+        <PainelExploracao :users="users" :open-campaigns="openCampaigns" />
     </main>
 
-    <nav class="mobile-nav" aria-label="Navegação móvel">
-        <RouterLink to="/taverna" aria-current="page">
-            <Icone name="hash" />
-            <small>Taverna</small>
-        </RouterLink>
-        <RouterLink to="/descobrir">
-            <Icone name="compass" />
-            <small>Explorar</small>
-        </RouterLink>
-        <button @click="focusPost" title="Nova publicação" aria-label="Nova publicação">
-            <Icone name="plus" />
-        </button>
-        <RouterLink to="/campanhas">
-            <Icone name="swords" />
-            <small>Mesas</small>
-        </RouterLink>
-        <RouterLink to="/perfil">
-            <Icone name="user-round" />
-            <small>Perfil</small>
-        </RouterLink>
-    </nav>
+    <MenuMovelTaverna @nova-publicacao="focusPost" />
 </template>

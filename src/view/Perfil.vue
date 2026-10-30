@@ -1,8 +1,9 @@
-<script setup>
+<script setup lang="ts">
+// Esta página reúne os dados do perfil e controla suas ações de edição e amizade.
 import { ref, computed, onMounted, watch, nextTick } from "vue"
 import { useRoute } from "vue-router"
-import { serviceController as api, record, query } from "../controller/service.controller.js"
-import { sessao } from "../controller/user.controller.js"
+import { apiController as api, record, query } from "../controller/api.controller.ts"
+import { sessao } from "../controller/usuario.controller.ts"
 import {
     nomeUsuario,
     avatarUsuario,
@@ -10,35 +11,33 @@ import {
     privado,
     relacaoEntre,
     isAcceptedFriendRelation,
-    mestreId,
-    excluirPublicacao,
-    excluirCampanha
-} from "../controller/comunidade.controller.js"
-import { criarAmizadeMutua } from "../controller/amizade.controller.js"
-import { responderSolicitacao, alteracaoSolicitacoes } from "../composables/useNotificacoes.js"
-import { confirmarExclusao } from "../composables/useModal.js"
-import { useAcao } from "../composables/useAcao.js"
-import Avatar from "../components/Avatar.vue"
-import Input from "../components/input/Input.vue"
+    excluirPublicacao
+} from "../controller/comunidade.controller.ts"
+import { mestreId, excluirCampanha } from "../controller/campanha.controller.ts"
+import { criarAmizadeMutua } from "../controller/amizade.controller.ts"
+import { responderSolicitacao, alteracaoSolicitacoes } from "../composables/useNotificacoes.ts"
+import { confirmarExclusao } from "../composables/useModal.ts"
+import { useOperacaoAssincrona } from "../composables/useOperacaoAssincrona.ts"
+import AvatarUsuario from "../components/AvatarUsuario.vue"
+import FormularioPerfil from "../components/perfil/FormularioPerfil.vue"
+import SolicitacoesPerfil from "../components/perfil/SolicitacoesPerfil.vue"
+import AtividadesPerfil from "../components/perfil/AtividadesPerfil.vue"
 import TituloPagina from "../components/TituloPagina.vue"
-const route = useRoute(),
-    userId = sessao.userId,
-    id = String(route.query.id || userId),
-    mine = id === userId
-const user = ref(null),
-    relations = ref([]),
-    people = ref([]),
-    systems = ref([]),
-    posts = ref([]),
-    campaigns = ref([]),
-    avatars = ref([])
-const editing = ref(false),
-    name = ref(""),
-    biography = ref(""),
-    privacy = ref("publico"),
-    avatar = ref(""),
-    systemName = ref("")
-const { carregando, mensagem, executar } = useAcao()
+const route = useRoute()
+const userId = sessao.userId
+const id = String(route.query.id || userId)
+const mine = id === userId
+const user = ref(null)
+const relations = ref([])
+const people = ref([])
+const systems = ref([])
+const posts = ref([])
+const campaigns = ref([])
+const avatars = ref([])
+const editing = ref(false)
+const formulario = ref({ nome: "", biografia: "", privacidade: "publico", avatar: "" })
+const systemName = ref("")
+const { carregando, mensagem, executar } = useOperacaoAssincrona()
 const pair = computed(() => relations.value.filter(item => relacaoEntre(item, userId, id)))
 const friendship = computed(() => pair.value.find(isAcceptedFriendRelation))
 const following = computed(() =>
@@ -101,12 +100,13 @@ async function load() {
     if (route.hash === "#solicitacoesCard")
         document.getElementById("solicitacoesCard")?.scrollIntoView({ block: "start", behavior: "smooth" })
 }
+// Copio os dados para o formulário para só salvar as alterações após a confirmação.
 async function startEdit() {
     if (!mine || !user.value) return
-    name.value = user.value.nome || ""
-    biography.value = user.value.biografia || ""
-    privacy.value = privado(user.value) ? "privado" : "publico"
-    avatar.value = avatarUsuario(user.value)
+    formulario.value.nome = user.value.nome || ""
+    formulario.value.biografia = user.value.biografia || ""
+    formulario.value.privacidade = privado(user.value) ? "privado" : "publico"
+    formulario.value.avatar = avatarUsuario(user.value)
     let catalog
     try {
         catalog = await api.get("/avatar")
@@ -116,8 +116,10 @@ async function startEdit() {
     }
     if (!Array.isArray(catalog)) throw new Error("A lista de avatares está inválida.")
     avatars.value = [
-        { url: avatar.value },
-        ...catalog.filter(item => item?.url && typeof item.url === "string" && item.url !== avatar.value)
+        { url: formulario.value.avatar },
+        ...catalog.filter(
+            item => item?.url && typeof item.url === "string" && item.url !== formulario.value.avatar
+        )
     ]
     editing.value = true
     await nextTick()
@@ -131,13 +133,13 @@ async function cancelEdit() {
 function save() {
     executar(async () => {
         if (!mine) return
-        const nome = name.value.trim()
+        const nome = formulario.value.nome.trim()
         if (!nome) throw new Error("Digite seu nome.")
         await api.patch(record("users", userId), {
             nome,
-            biografia: biography.value.trim(),
-            avatar: avatar.value,
-            privado: privacy.value === "privado"
+            biografia: formulario.value.biografia.trim(),
+            avatar: formulario.value.avatar,
+            privado: formulario.value.privacidade === "privado"
         })
         editing.value = false
         await load()
@@ -254,7 +256,7 @@ onMounted(() =>
         <p class="mensagem" role="status">{{ mensagem }}</p>
         <section class="card">
             <div class="perfil-grande">
-                <Avatar id="avatarPerfil" :user="user" alt="Avatar" />
+                <AvatarUsuario id="avatarPerfil" :user="user" alt="Avatar" />
                 <div>
                     <h2 id="nomePerfil">{{ user ? nomeUsuario(user) : "Carregando..." }}</h2>
                     <p id="emailPerfil">{{ mine ? user?.email : "" }}</p>
@@ -295,85 +297,23 @@ onMounted(() =>
                 Editar perfil
             </button>
         </section>
-        <section v-if="editing" id="editarPerfil" class="card">
-            <h2>Editar perfil</h2>
-            <form id="formPerfil" class="formulario" @submit.prevent="save">
-                <Input id="nome" v-model="name" label="Nome" required />
-                <Input id="biografia" v-model="biography" label="Biografia" multiline />
-                <div class="campo">
-                    <label for="privacidadePerfil">Privacidade da conta</label>
-                    <select id="privacidadePerfil" v-model="privacy">
-                        <option value="publico">Pública</option>
-                        <option value="privado">Privada</option>
-                    </select>
-                </div>
-                <div class="campo">
-                    <label>Escolha um avatar</label>
-                    <div id="avatarOpcoes" class="avatar-opcoes">
-                        <button
-                            v-for="(option, index) in avatars"
-                            :key="option.url"
-                            type="button"
-                            class="avatar-escolha"
-                            :title="option.url === user.avatar ? 'Seu avatar atual' : 'Avatar ' + (index + 1)"
-                            :aria-pressed="option.url === avatar"
-                            @click="avatar = option.url"
-                        >
-                            <img
-                                :src="option.url"
-                                :alt="'Avatar ' + (index + 1)"
-                                :class="{ selecionado: option.url === avatar }"
-                            />
-                        </button>
-                    </div>
-                </div>
-                <button class="botao" :disabled="carregando">Salvar perfil</button>
-                <button id="cancelarEdicao" class="botao-secundario" type="button" @click="cancelEdit">
-                    Cancelar
-                </button>
-            </form>
-        </section>
-        <section v-if="mine" id="solicitacoesCard" class="card">
-            <h2>Seguidores e solicitações</h2>
-            <div id="solicitacoesPerfil" class="lista">
-                <p v-if="!requests.length">Você não tem solicitações ou novos seguidores.</p>
-                <div v-for="request in requests" :key="request.id" class="item-lista">
-                    <RouterLink class="item-info" :to="{ path: '/perfil', query: { id: request.userId } }">
-                        <strong>
-                            {{
-                                nomeUsuario(
-                                    people.find(person => String(person.id) === String(request.userId))
-                                )
-                            }}
-                        </strong>
-                        <p>
-                            {{
-                                request.status === "pending"
-                                    ? "Solicitou para seguir você"
-                                    : "Está seguindo você"
-                            }}
-                        </p>
-                    </RouterLink>
-                    <div class="acoes-seguidor">
-                        <template v-if="request.status === 'pending'">
-                            <button class="botao" :disabled="carregando" @click="respond(request, true)">
-                                Aceitar
-                            </button>
-                            <button
-                                class="botao-secundario"
-                                :disabled="carregando"
-                                @click="respond(request, false)"
-                            >
-                                Recusar
-                            </button>
-                        </template>
-                        <button v-else class="botao" :disabled="carregando" @click="followBack(request)">
-                            Seguir de volta
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </section>
+        <FormularioPerfil
+            v-if="editing"
+            v-model="formulario"
+            :avatars="avatars"
+            :avatar-atual="user?.avatar"
+            :carregando="carregando"
+            @salvar="save"
+            @cancelar="cancelEdit"
+        />
+        <SolicitacoesPerfil
+            v-if="mine"
+            :requests="requests"
+            :people="people"
+            :carregando="carregando"
+            @responder="respond"
+            @seguir="followBack"
+        />
         <section v-if="!visible" id="perfilPrivadoAviso" class="card">
             <h2>Perfil privado</h2>
             <p>Envie uma solicitação para ver as publicações, os sistemas e as campanhas deste jogador.</p>
@@ -401,43 +341,14 @@ onMounted(() =>
                 </span>
             </div>
         </section>
-        <section v-if="visible" id="campanhasCard" class="card">
-            <h2>Campanhas criadas</h2>
-            <div id="campanhasPerfil" class="lista">
-                <p v-if="!campaigns.length">Nenhuma campanha criada.</p>
-                <div v-for="campaign in campaigns" :key="campaign.id" class="item-lista">
-                    <RouterLink class="item-info" :to="{ path: '/campanha', query: { id: campaign.id } }">
-                        <strong>{{ campaign.nome }}</strong>
-                        <p>
-                            {{ campaign.sistema || campaign.sistemaNome || "Sistema não informado" }} ·
-                            {{ campaign.status || "aberta" }}
-                        </p>
-                    </RouterLink>
-                    <button
-                        v-if="mine"
-                        class="botao-perigo"
-                        :disabled="carregando"
-                        @click="removeCampaign(campaign)"
-                    >
-                        Excluir
-                    </button>
-                </div>
-            </div>
-        </section>
-        <section class="card">
-            <h2>Publicações</h2>
-            <div id="postsPerfil" class="lista">
-                <p v-if="!visible">Conteúdo disponível após aceitar sua solicitação.</p>
-                <p v-else-if="!posts.length">Nenhuma publicação.</p>
-                <div v-for="post in posts" :key="post.id" class="item-lista">
-                    <RouterLink class="item-info" :to="{ path: '/taverna', hash: '#post-' + post.id }">
-                        {{ post.conteudo || post.body || "" }}
-                    </RouterLink>
-                    <button v-if="mine" class="botao-perigo" :disabled="carregando" @click="removePost(post)">
-                        Excluir
-                    </button>
-                </div>
-            </div>
-        </section>
+        <AtividadesPerfil
+            :visible="visible"
+            :mine="mine"
+            :campaigns="campaigns"
+            :posts="posts"
+            :carregando="carregando"
+            @excluir-campanha="removeCampaign"
+            @excluir-publicacao="removePost"
+        />
     </main>
 </template>

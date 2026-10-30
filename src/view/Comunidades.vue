@@ -1,28 +1,27 @@
-<script setup>
+<script setup lang="ts">
+// Aqui eu carrego as comunidades e trato as ações enviadas pelos cards.
 import { ref, computed, onMounted, nextTick } from "vue"
-import { serviceController as api, query, record } from "../controller/service.controller.js"
-import { sessao } from "../controller/user.controller.js"
-import { nomeUsuario, participantesDaComunidade } from "../controller/comunidade.controller.js"
-import { useAcao } from "../composables/useAcao.js"
+import { apiController as api, query, record } from "../controller/api.controller.ts"
+import { sessao } from "../controller/usuario.controller.ts"
+import { useOperacaoAssincrona } from "../composables/useOperacaoAssincrona.ts"
 import TituloPagina from "../components/TituloPagina.vue"
-import Input from "../components/input/Input.vue"
-import Avatar from "../components/Avatar.vue"
+import CampoFormulario from "../components/CampoFormulario.vue"
+import CardComunidade from "../components/comunidades/CardComunidade.vue"
 const userId = sessao.userId
-const communities = ref([]),
-    members = ref([]),
-    users = ref([]),
-    expanded = ref(new Set())
-const name = ref(""),
-    description = ref(""),
-    editing = ref(null)
-const { carregando, mensagem, executar } = useAcao()
+const communities = ref([])
+const members = ref([])
+const users = ref([])
+const expanded = ref(new Set())
+const name = ref("")
+const description = ref("")
+const editing = ref(null)
+const { carregando, mensagem, executar } = useOperacaoAssincrona()
 const title = computed(() => (editing.value != null ? "Editar comunidade" : "Criar comunidade"))
 const owner = community => String(community.ownerId) === userId
 const membership = community =>
     members.value.find(
         item => String(item.communityId) === String(community.id) && String(item.userId) === userId
     )
-const participantIds = community => participantesDaComunidade(community, members.value)
 async function load() {
     const [data, relations] = await Promise.all([api.get("/communities"), api.get("/communityMembers")])
     communities.value = data
@@ -41,8 +40,8 @@ async function edit(community) {
 }
 function save() {
     executar(async () => {
-        const nome = name.value.trim(),
-            descricao = description.value.trim()
+        const nome = name.value.trim()
+        const descricao = description.value.trim()
         if (!nome || !descricao) throw new Error("Preencha o nome e a descrição.")
         if (editing.value != null) {
             const current = await api.get(record("communities", editing.value))
@@ -85,8 +84,8 @@ onMounted(() => executar(load))
         <section class="card">
             <h2>{{ title }}</h2>
             <form id="formComunidade" class="formulario" @submit.prevent="save">
-                <Input id="nome" v-model="name" label="Nome" required />
-                <Input id="descricao" v-model="description" label="Descrição" multiline required />
+                <CampoFormulario id="nome" v-model="name" label="Nome" required />
+                <CampoFormulario id="descricao" v-model="description" label="Descrição" multiline required />
                 <button class="botao" :disabled="carregando">
                     {{ editing != null ? "Salvar alterações" : "Criar comunidade" }}
                 </button>
@@ -99,46 +98,18 @@ onMounted(() => executar(load))
             <h2>Comunidades</h2>
             <div id="comunidades" class="grid">
                 <p v-if="!communities.length && !carregando">Nenhuma comunidade criada.</p>
-                <article v-for="community in communities" :key="community.id" class="card">
-                    <h3>{{ community.nome }}</h3>
-                    <p>{{ community.descricao }}</p>
-                    <p>{{ participantIds(community).size }} participante(s)</p>
-                    <button class="botao" :disabled="carregando || owner(community)" @click="join(community)">
-                        {{ owner(community) ? "Sua comunidade" : membership(community) ? "Sair" : "Entrar" }}
-                    </button>
-                    <template v-if="owner(community) || membership(community)">
-                        <RouterLink
-                            class="botao-secundario"
-                            :to="{ path: '/mensagens', query: { comunidade: community.id } }"
-                        >
-                            Abrir chat
-                        </RouterLink>
-                        <button v-if="owner(community)" class="botao-secundario" @click="edit(community)">
-                            Editar comunidade
-                        </button>
-                        <button
-                            type="button"
-                            class="botao-secundario ver-participantes"
-                            :aria-expanded="expanded.has(community.id)"
-                            :disabled="carregando"
-                            @click="showParticipants(community)"
-                        >
-                            Ver participantes
-                        </button>
-                        <div v-if="expanded.has(community.id)" class="comunidade-participantes">
-                            <RouterLink
-                                v-for="user in users.filter(item =>
-                                    participantIds(community).has(String(item.id))
-                                )"
-                                :key="user.id"
-                                :to="{ path: '/perfil', query: { id: user.id } }"
-                            >
-                                <Avatar :user="user" />
-                                <span>{{ nomeUsuario(user) }}</span>
-                            </RouterLink>
-                        </div>
-                    </template>
-                </article>
+                <CardComunidade
+                    v-for="community in communities"
+                    :key="community.id"
+                    :community="community"
+                    :members="members"
+                    :users="users"
+                    :expanded="expanded.has(community.id)"
+                    :carregando="carregando"
+                    @participar="join(community)"
+                    @editar="edit(community)"
+                    @participantes="showParticipants(community)"
+                />
             </div>
         </section>
     </main>

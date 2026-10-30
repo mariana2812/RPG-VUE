@@ -1,6 +1,7 @@
-<script setup>
+<script setup lang="ts">
+// O sino abre a lista de solicitações e destaca quando há novidades.
 import Icone from "./Icone.vue"
-import { solicitacoesPendentes, notificacoesAbertas } from "../composables/useNotificacoes.js"
+import { solicitacoesPendentes, notificacoesAbertas } from "../composables/useNotificacoes.ts"
 </script>
 <template>
     <button type="button" title="Notificações" aria-label="Notificações" @click="notificacoesAbertas = true">

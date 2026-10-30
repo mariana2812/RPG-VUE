@@ -1,14 +1,15 @@
-<script setup>
+<script setup lang="ts">
+// Aqui eu mostro os dados da conta e a opção de encerrar a sessão.
 import { ref, onMounted } from "vue"
 import { useRouter } from "vue-router"
-import { limparSessao, sessao } from "../controller/user.controller.js"
-import { serviceController as api, record } from "../controller/service.controller.js"
-import { useAcao } from "../composables/useAcao.js"
+import { limparSessao, sessao } from "../controller/usuario.controller.ts"
+import { apiController as api, record } from "../controller/api.controller.ts"
+import { useOperacaoAssincrona } from "../composables/useOperacaoAssincrona.ts"
 import TituloPagina from "../components/TituloPagina.vue"
 
 const router = useRouter()
 const email = ref("")
-const { mensagem, executar } = useAcao()
+const { mensagem, executar } = useOperacaoAssincrona()
 
 async function carregarConta() {
     const usuario = await api.get(record("users", sessao.userId))

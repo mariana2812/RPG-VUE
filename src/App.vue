@@ -1,15 +1,14 @@
-<script setup>
+<script setup lang="ts">
+// Deixo aqui a estrutura principal e os componentes que aparecem junto das páginas.
 import { useRoute } from "vue-router"
-import Modal from "./components/Modal.vue"
-import Navegacao from "./components/Navegacao.vue"
-import Notificacoes from "./components/Notificacoes.vue"
+import DialogoConfirmacao from "./components/DialogoConfirmacao.vue"
+import MenuPrincipal from "./components/MenuPrincipal.vue"
+import CentralNotificacoes from "./components/CentralNotificacoes.vue"
 const route = useRoute()
 </script>
 <template>
-    <Navegacao v-if="route.meta.protected && route.name !== 'Taverna'" :key="route.path" />
-    <RouterView v-slot="{ Component, route: current }">
-        <component :is="Component" :key="current.path + JSON.stringify(current.query)" />
-    </RouterView>
-    <Modal />
-    <Notificacoes />
+    <MenuPrincipal v-if="route.meta.protected && route.name !== 'Taverna'" :key="route.path" />
+    <RouterView :key="route.path + JSON.stringify(route.query)" />
+    <DialogoConfirmacao />
+    <CentralNotificacoes />
 </template>
