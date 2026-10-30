@@ -127,3 +127,13 @@ export const amigosDe = (relacoes, id) =>
     )
 export const aberta = campanha => ["aberta", "open"].includes(campanha?.status)
 export const mestreId = campanha => campanha?.masterId ?? campanha?.mestreId
+
+export const participantesDaComunidade = (comunidade, membros) =>
+    new Set([
+        String(comunidade.ownerId),
+        ...membros
+            .filter(item => String(item.communityId) === String(comunidade.id))
+            .map(item => String(item.userId))
+    ])
+export const participaDaComunidade = (comunidade, membros, id) =>
+    participantesDaComunidade(comunidade, membros).has(String(id))

@@ -3,15 +3,10 @@ import { ref, computed, onMounted, nextTick } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { serviceController as api, query, record } from "../controller/service.controller.js"
 import { sessao } from "../controller/user.controller.js"
-import {
-    nomeUsuario,
-    mestreId,
-    aberta,
-    excluirCampanha,
-    lerImagem
-} from "../controller/comunidade.controller.js"
+import { nomeUsuario, mestreId, aberta, excluirCampanha } from "../controller/comunidade.controller.js"
 import { confirmarExclusao } from "../composables/useModal.js"
 import { useAcao } from "../composables/useAcao.js"
+import { useImagem } from "../composables/useImagem.js"
 import Avatar from "../components/Avatar.vue"
 import CamposCampanha from "../components/CamposCampanha.vue"
 const route = useRoute(),
@@ -24,10 +19,14 @@ const campaign = ref(null),
     posts = ref([]),
     text = ref("")
 const editing = ref(false),
-    form = ref({}),
-    preview = ref(""),
-    imageLoading = ref(false)
+    form = ref({})
 const { carregando, mensagem, executar } = useAcao()
+const {
+    imagem: preview,
+    lendo: imageLoading,
+    selecionar: selecionarImagem,
+    limpar: limparImagem
+} = useImagem(mensagem)
 const master = computed(() => String(mestreId(campaign.value)) === userId)
 const membership = computed(() => members.value.find(item => String(item.userId) === userId))
 const participant = computed(() => master.value || !!membership.value)
@@ -114,33 +113,16 @@ async function edit() {
         maxJogadores: campaign.value.maxJogadores || 5,
         removerCapa: false
     }
-    preview.value = campaign.value.capa || ""
+    limparImagem(campaign.value.capa || "")
     editing.value = true
     await nextTick()
     document.getElementById("editarNome")?.focus()
 }
-let imageVersion = 0
 async function image(file) {
-    const version = ++imageVersion
-    imageLoading.value = true
-    try {
-        const value = await lerImagem(file)
-        if (version === imageVersion) {
-            preview.value = value
-            form.value.removerCapa = false
-        }
-    } catch (error) {
-        mensagem.value = error.message
-    } finally {
-        if (version === imageVersion) imageLoading.value = false
-    }
+    if (await selecionarImagem(file)) form.value.removerCapa = false
 }
 function removeImage() {
-    if (form.value.removerCapa) {
-        imageVersion++
-        preview.value = ""
-        imageLoading.value = false
-    }
+    if (form.value.removerCapa) limparImagem()
 }
 function save() {
     executar(async () => {

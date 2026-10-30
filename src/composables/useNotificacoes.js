@@ -1,6 +1,7 @@
 import { ref } from "vue"
 import { serviceController as api, record } from "../controller/service.controller.js"
 import { sessao } from "../controller/user.controller.js"
+import { participaDaComunidade } from "../controller/comunidade.controller.js"
 export const solicitacoesPendentes = ref([])
 export const mensagensRecebidas = ref([])
 export const contatosComConversa = ref(new Set())
@@ -91,15 +92,7 @@ export function iniciarNotificacoes() {
             if (stopped || sessao.userId !== id) return
             const ids = new Set(
                 communities
-                    .filter(
-                        item =>
-                            String(item.ownerId) === id ||
-                            members.some(
-                                member =>
-                                    String(member.communityId) === String(item.id) &&
-                                    String(member.userId) === id
-                            )
-                    )
+                    .filter(item => participaDaComunidade(item, members, id))
                     .map(item => String(item.id))
             )
             atualizarResumoMensagens(messages, ids)

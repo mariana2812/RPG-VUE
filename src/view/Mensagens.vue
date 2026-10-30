@@ -3,7 +3,13 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from "vue"
 import { useRoute } from "vue-router"
 import { serviceController as api } from "../controller/service.controller.js"
 import { sessao } from "../controller/user.controller.js"
-import { nomeUsuario, privado, amigosDe } from "../controller/comunidade.controller.js"
+import {
+    nomeUsuario,
+    privado,
+    amigosDe,
+    participantesDaComunidade,
+    participaDaComunidade
+} from "../controller/comunidade.controller.js"
 import {
     contatosComConversa,
     atualizarResumoMensagens,
@@ -58,21 +64,16 @@ const groups = computed(() =>
         ? []
         : communities.value.filter(item => item.nome.toLowerCase().includes(queryText.value))
 )
+const conversas = computed(() => [
+    ...contacts.value.map(data => ({ type: "usuario", data })),
+    ...groups.value.map(data => ({ type: "comunidade", data }))
+])
 const selectedCommunityIds = () => new Set(communities.value.map(item => String(item.id)))
 const groupParticipants = community => {
-    const ids = new Set([
-        String(community.ownerId),
-        ...members.value
-            .filter(item => String(item.communityId) === String(community.id))
-            .map(item => String(item.userId))
-    ])
+    const ids = participantesDaComunidade(community, members.value)
     return users.value.filter(item => ids.has(String(item.id)))
 }
-const member = community =>
-    String(community.ownerId) === userId ||
-    members.value.some(
-        item => String(item.communityId) === String(community.id) && String(item.userId) === userId
-    )
+const member = community => participaDaComunidade(community, members.value, userId)
 const detail = computed(() => {
     if (!selected.value) return ""
     if (selected.value.type === "usuario") return "Conversa direta"
@@ -243,34 +244,26 @@ onUnmounted(() => {
                 </nav>
                 <div id="contatos" class="contatos">
                     <button
-                        v-for="user in contacts"
-                        :key="'user-' + user.id"
+                        v-for="{ type, data } in conversas"
+                        :key="type + '-' + data.id"
                         type="button"
                         class="contato"
-                        :class="{ ativo: isSelected('usuario', user.id) }"
-                        :title="nomeUsuario(user)"
-                        :aria-pressed="isSelected('usuario', user.id)"
-                        @click="executar(() => select('usuario', user))"
+                        :class="{
+                            ativo: isSelected(type, data.id),
+                            'contato-comunidade': type === 'comunidade'
+                        }"
+                        :title="type === 'comunidade' ? 'Chat da comunidade ' + data.nome : nomeUsuario(data)"
+                        :aria-pressed="isSelected(type, data.id)"
+                        @click="executar(() => select(type, data))"
                     >
-                        <Avatar :user="user" class="avatar" />
-                        <span>{{ nomeUsuario(user) }}</span>
-                        <ContadorMensagens type="usuario" :id="user.id" />
+                        <span v-if="type === 'comunidade'" class="avatar avatar-comunidade" aria-hidden="true"
+                            >#</span
+                        >
+                        <Avatar v-else :user="data" class="avatar" />
+                        <span>{{ type === "comunidade" ? data.nome : nomeUsuario(data) }}</span>
+                        <ContadorMensagens :type="type" :id="data.id" />
                     </button>
-                    <button
-                        v-for="group in groups"
-                        :key="'community-' + group.id"
-                        type="button"
-                        class="contato contato-comunidade"
-                        :class="{ ativo: isSelected('comunidade', group.id) }"
-                        :title="'Chat da comunidade ' + group.nome"
-                        :aria-pressed="isSelected('comunidade', group.id)"
-                        @click="executar(() => select('comunidade', group))"
-                    >
-                        <span class="avatar avatar-comunidade" aria-hidden="true">#</span>
-                        <span>{{ group.nome }}</span>
-                        <ContadorMensagens type="comunidade" :id="group.id" />
-                    </button>
-                    <p v-if="!contacts.length && !groups.length" class="contatos-vazio">
+                    <p v-if="!conversas.length" class="contatos-vazio">
                         {{
                             search
                                 ? "Nenhuma conversa encontrada."

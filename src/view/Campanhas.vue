@@ -3,30 +3,15 @@ import { ref, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { serviceController as api } from "../controller/service.controller.js"
 import { sessao } from "../controller/user.controller.js"
-import { lerImagem } from "../controller/comunidade.controller.js"
+import { useImagem } from "../composables/useImagem.js"
 import { useAcao } from "../composables/useAcao.js"
 import TituloPagina from "../components/TituloPagina.vue"
 import CamposCampanha from "../components/CamposCampanha.vue"
 const router = useRouter()
-const campaigns = ref([]),
-    preview = ref("")
+const campaigns = ref([])
 const form = ref({ nome: "", sistema: "", descricao: "", maxJogadores: 5 })
 const { carregando, mensagem, executar } = useAcao()
-let imageVersion = 0
-const imageLoading = ref(false)
-async function image(file) {
-    const version = ++imageVersion
-    imageLoading.value = true
-    try {
-        const value = await lerImagem(file)
-        if (version === imageVersion) preview.value = value
-    } catch (error) {
-        mensagem.value = error.message
-        preview.value = ""
-    } finally {
-        if (version === imageVersion) imageLoading.value = false
-    }
-}
+const { imagem: preview, lendo: imageLoading, selecionar: image } = useImagem(mensagem, true)
 function create() {
     executar(async () => {
         const { maxJogadores } = form.value

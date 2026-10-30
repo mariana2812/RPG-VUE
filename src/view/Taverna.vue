@@ -4,15 +4,9 @@ import { useRoute } from "vue-router"
 import { links } from "../routes/menu.js"
 import { serviceController as api, query, record } from "../controller/service.controller.js"
 import { sessao } from "../controller/user.controller.js"
-import {
-    amigosDe,
-    nomeUsuario,
-    privado,
-    mestreId,
-    aberta,
-    lerImagem
-} from "../controller/comunidade.controller.js"
+import { amigosDe, nomeUsuario, privado, mestreId, aberta } from "../controller/comunidade.controller.js"
 import { useAcao } from "../composables/useAcao.js"
+import { useImagem } from "../composables/useImagem.js"
 import { abrirModal } from "../composables/useModal.js"
 import Icone from "../components/Icone.vue"
 import Avatar from "../components/Avatar.vue"
@@ -30,13 +24,17 @@ const user = ref(null),
     friends = ref(new Set())
 const search = ref(""),
     text = ref(""),
-    image = ref(""),
     system = ref(""),
-    loading = ref(false),
-    imageLoading = ref(false)
+    loading = ref(false)
 const postInput = ref(null),
     imageInput = ref(null)
 const { carregando, mensagem, executar } = useAcao()
+const {
+    imagem: image,
+    lendo: imageLoading,
+    selecionar: chooseImage,
+    limpar: limparImagem
+} = useImagem(mensagem)
 const openCampaigns = computed(() => campaigns.value.filter(aberta).slice(0, 4))
 const campaignCount = computed(
     () =>
@@ -127,19 +125,9 @@ function focusPost() {
 }
 function toggleImage() {
     if (image.value) {
-        image.value = ""
+        limparImagem()
         imageInput.value.value = ""
     } else imageInput.value?.click()
-}
-async function chooseImage(file) {
-    imageLoading.value = true
-    try {
-        image.value = await lerImagem(file)
-    } catch (error) {
-        mensagem.value = error.message
-    } finally {
-        imageLoading.value = false
-    }
 }
 async function chooseSystem() {
     const name = await abrirModal({
@@ -166,7 +154,8 @@ function publish() {
             conteudo,
             created_at: new Date().toISOString()
         })
-        text.value = image.value = system.value = ""
+        text.value = system.value = ""
+        limparImagem()
         if (imageInput.value) imageInput.value.value = ""
         await loadPosts()
     })

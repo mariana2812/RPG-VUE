@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, nextTick } from "vue"
 import { serviceController as api, query, record } from "../controller/service.controller.js"
 import { sessao } from "../controller/user.controller.js"
-import { nomeUsuario } from "../controller/comunidade.controller.js"
+import { nomeUsuario, participantesDaComunidade } from "../controller/comunidade.controller.js"
 import { useAcao } from "../composables/useAcao.js"
 import TituloPagina from "../components/TituloPagina.vue"
 import Input from "../components/input/Input.vue"
@@ -22,13 +22,7 @@ const membership = community =>
     members.value.find(
         item => String(item.communityId) === String(community.id) && String(item.userId) === userId
     )
-const participantIds = community =>
-    new Set([
-        String(community.ownerId),
-        ...members.value
-            .filter(item => String(item.communityId) === String(community.id))
-            .map(item => String(item.userId))
-    ])
+const participantIds = community => participantesDaComunidade(community, members.value)
 async function load() {
     const [data, relations] = await Promise.all([api.get("/communities"), api.get("/communityMembers")])
     communities.value = data
