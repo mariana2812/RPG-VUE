@@ -8,7 +8,7 @@ const route = useRoute()
 const open = ref(false)
 const links = [['/taverna','Taverna','hash'],['/descobrir','Descobrir jogadores','compass'],['/campanhas','Campanhas','swords'],['/mensagens','Mensagens','message-circle'],['/comunidades','Comunidades','castle'],['/perfil','Meu perfil','user-round'],['/configuracoes','Configurações','settings']]
 const active = path => route.meta.section === path
-const escape = event => { if (event.key === 'Escape') open.value = false }
+const escape = event => { if (event.key === 'Escape') toggle(false) }
 onMounted(() => document.addEventListener('keydown', escape))
 onUnmounted(() => { document.removeEventListener('keydown', escape); document.body.classList.remove('menu-aberto') })
 function toggle(value) { open.value = value; document.body.classList.toggle('menu-aberto', value) }

@@ -10,8 +10,7 @@ import navigationCss from '../assets/styles/navigation.css?raw'
 import feedCss from '../assets/styles/feed.css?raw'
 import tavernCss from '../assets/styles/tavern.css?raw'
 import profileCss from '../assets/styles/profile.css?raw'
-const placeholder = { template: '<main class="pagina"><p>Migrando esta tela para Vue.</p></main>' }
-const page = (path, name, title, component, style, section = path) => ({ path, name, component, alias: ['/' + (name === 'Tavern' ? 'Blog' : name === 'Register' ? 'Cadastro' : path.slice(1)) + '/index.html', ...(path === '/' ? ['/index.html'] : [])], meta: { title, style, section, protected: !['Home','Login','Register'].includes(name) } })
+const page = (path, name, title, component, style, section = path) => ({ path, name, component, alias: path === '/' ? ['/index.html'] : ['/' + (name === 'Tavern' ? 'Blog' : name === 'Register' ? 'Cadastro' : path.slice(1)) + '/index.html'], meta: { title, style, section, protected: !['Home','Login','Register'].includes(name) } })
 export const router = createRouter({
     history: createWebHistory(),
     routes: [
@@ -24,7 +23,7 @@ export const router = createRouter({
         page('/campanha', 'Campaign', 'Campanha', () => import('../view/Campaign.vue'), communityCss + navigationCss, '/campanhas'),
         page('/comunidades', 'Communities', 'Comunidades', () => import('../view/Communities.vue'), communityCss + navigationCss),
         page('/perfil', 'Profile', 'Perfil', () => import('../view/Profile.vue'), communityCss + profileCss + navigationCss),
-        page('/mensagens', 'Messages', 'Mensagens', placeholder, communityCss + navigationCss),
+        page('/mensagens', 'Messages', 'Mensagens', () => import('../view/Messages.vue'), communityCss + navigationCss),
         page('/configuracoes', 'Settings', 'Configurações', () => import('../view/Settings.vue'), communityCss + navigationCss),
         { path: '/Blog', redirect: '/taverna' }, { path: '/:pathMatch(.*)*', redirect: '/' }
     ],

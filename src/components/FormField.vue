@@ -1,4 +1,5 @@
 <script setup>
+defineOptions({ inheritAttrs: false })
 defineProps({ modelValue: [String, Number], id: String, label: String, multiline: Boolean, type: { type: String, default: 'text' } })
 const emit = defineEmits(['update:modelValue'])
 </script>
