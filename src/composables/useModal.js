@@ -23,3 +23,7 @@ export function fecharModal(value = null) {
     modal.value = null
     resolve?.(value)
 }
+
+export function confirmarExclusao(titulo, mensagem, confirmar = "Excluir") {
+    return abrirModal({ titulo, mensagem, confirmar, perigo: true })
+}

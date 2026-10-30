@@ -4,7 +4,7 @@ import { useRouter } from "vue-router"
 import { serviceController as api, query, record } from "../controller/service.controller.js"
 import { sessao } from "../controller/user.controller.js"
 import { nomeUsuario, excluirPublicacao, editarPublicacao } from "../controller/comunidade.controller.js"
-import { abrirModal } from "../composables/useModal.js"
+import { confirmarExclusao } from "../composables/useModal.js"
 import { adicionarAviso } from "../composables/useNotificacoes.js"
 import { useAcao } from "../composables/useAcao.js"
 import Avatar from "./Avatar.vue"
@@ -96,12 +96,11 @@ function edit() {
 function remove() {
     executar(async () => {
         if (
-            !(await abrirModal({
-                titulo: "Excluir publicação?",
-                mensagem: "Sua publicação será removida do mural. Essa ação não pode ser desfeita.",
-                confirmar: "Excluir publicação",
-                perigo: true
-            }))
+            !(await confirmarExclusao(
+                "Excluir publicação?",
+                "Sua publicação será removida do mural. Essa ação não pode ser desfeita.",
+                "Excluir publicação"
+            ))
         )
             return
         await excluirPublicacao(props.post.id)

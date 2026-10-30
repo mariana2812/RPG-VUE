@@ -10,7 +10,7 @@ import {
     excluirCampanha,
     lerImagem
 } from "../controller/comunidade.controller.js"
-import { abrirModal } from "../composables/useModal.js"
+import { confirmarExclusao } from "../composables/useModal.js"
 import { useAcao } from "../composables/useAcao.js"
 import Avatar from "../components/Avatar.vue"
 import CamposCampanha from "../components/CamposCampanha.vue"
@@ -73,13 +73,11 @@ function toggleStatus() {
 function remove() {
     executar(async () => {
         if (
-            !(await abrirModal({
-                titulo: "Excluir campanha?",
-                mensagem:
-                    "A campanha, seus participantes e mensagens do mural serão removidos. Essa ação não pode ser desfeita.",
-                confirmar: "Excluir campanha",
-                perigo: true
-            }))
+            !(await confirmarExclusao(
+                "Excluir campanha?",
+                "A campanha, seus participantes e mensagens do mural serão removidos. Essa ação não pode ser desfeita.",
+                "Excluir campanha"
+            ))
         )
             return
         await excluirCampanha(id)
@@ -189,15 +187,7 @@ function send() {
 }
 function removePost(post) {
     executar(async () => {
-        if (
-            !(await abrirModal({
-                titulo: "Excluir mensagem?",
-                mensagem: "Esta mensagem será removida do mural.",
-                confirmar: "Excluir",
-                perigo: true
-            }))
-        )
-            return
+        if (!(await confirmarExclusao("Excluir mensagem?", "Esta mensagem será removida do mural."))) return
         await api.remove(record("campaignPosts", post.id))
         posts.value = await api.get(query("campaignPosts", { campaignId: id }))
     })

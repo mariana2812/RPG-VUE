@@ -16,7 +16,7 @@ import {
 } from "../controller/comunidade.controller.js"
 import { criarAmizadeMutua } from "../controller/amizade.controller.js"
 import { responderSolicitacao, alteracaoSolicitacoes } from "../composables/useNotificacoes.js"
-import { abrirModal } from "../composables/useModal.js"
+import { confirmarExclusao } from "../composables/useModal.js"
 import { useAcao } from "../composables/useAcao.js"
 import Avatar from "../components/Avatar.vue"
 import Input from "../components/input/Input.vue"
@@ -208,12 +208,11 @@ function followBack(request) {
 function removePost(post) {
     executar(async () => {
         if (
-            !(await abrirModal({
-                titulo: "Excluir publicação?",
-                mensagem: "A publicação será removida do mural. Essa ação não pode ser desfeita.",
-                confirmar: "Excluir publicação",
-                perigo: true
-            }))
+            !(await confirmarExclusao(
+                "Excluir publicação?",
+                "A publicação será removida do mural. Essa ação não pode ser desfeita.",
+                "Excluir publicação"
+            ))
         )
             return
         await excluirPublicacao(post.id)
@@ -223,13 +222,11 @@ function removePost(post) {
 function removeCampaign(campaign) {
     executar(async () => {
         if (
-            !(await abrirModal({
-                titulo: "Excluir campanha?",
-                mensagem:
-                    "A campanha, seus participantes e mensagens serão removidos. Essa ação não pode ser desfeita.",
-                confirmar: "Excluir campanha",
-                perigo: true
-            }))
+            !(await confirmarExclusao(
+                "Excluir campanha?",
+                "A campanha, seus participantes e mensagens serão removidos. Essa ação não pode ser desfeita.",
+                "Excluir campanha"
+            ))
         )
             return
         await excluirCampanha(campaign.id)

@@ -1,20 +1,13 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue"
 import { useRoute } from "vue-router"
+import { links } from "../routes/menu.js"
 import Icone from "./Icone.vue"
 import SinoNotificacoes from "./SinoNotificacoes.vue"
 import ContadorMensagens from "./ContadorMensagens.vue"
 const route = useRoute()
 const open = ref(false)
-const links = [
-    ["/taverna", "Taverna", "hash"],
-    ["/descobrir", "Descobrir jogadores", "compass"],
-    ["/campanhas", "Campanhas", "swords"],
-    ["/mensagens", "Mensagens", "message-circle"],
-    ["/comunidades", "Comunidades", "castle"],
-    ["/perfil", "Meu perfil", "user-round"],
-    ["/configuracoes", "Configurações", "settings"]
-]
+
 const active = path => route.meta.section === path
 const escape = event => {
     if (event.key === "Escape") toggle(false)

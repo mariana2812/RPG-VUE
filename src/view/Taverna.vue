@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from "vue"
 import { useRoute } from "vue-router"
+import { links } from "../routes/menu.js"
 import { serviceController as api, query, record } from "../controller/service.controller.js"
 import { sessao } from "../controller/user.controller.js"
 import {
@@ -93,14 +94,13 @@ async function loadPosts() {
         loading.value = false
     }
 }
+async function carregar(estado, caminho) {
+    estado.value = await api.get(caminho)
+}
 async function load() {
     const results = await Promise.allSettled([
-        (async () => {
-            user.value = await api.get(record("users", userId))
-        })(),
-        (async () => {
-            users.value = await api.get("/users")
-        })(),
+        carregar(user, record("users", userId)),
+        carregar(users, "/users"),
         (async () => {
             const [all, links] = await Promise.all([
                 api.get("/systems"),
@@ -181,17 +181,17 @@ onMounted(() => executar(load))
             <span class="sr-only">FrontD</span>
         </RouterLink>
         <span class="rail-divider"></span>
-        <RouterLink class="selected" to="/taverna" title="A taverna">
-            <Icone name="hash" />
-            <span class="sr-only">A taverna</span>
-        </RouterLink>
-        <RouterLink to="/campanhas" title="Campanhas">
-            <Icone name="swords" />
-            <span class="sr-only">Campanhas</span>
-        </RouterLink>
-        <RouterLink to="/comunidades" title="Comunidades">
-            <Icone name="castle" />
-            <span class="sr-only">Comunidades</span>
+        <RouterLink
+            v-for="[path, name, icon] in links.filter(item =>
+                ['/taverna', '/campanhas', '/comunidades'].includes(item[0])
+            )"
+            :key="path"
+            :to="path"
+            :class="{ selected: path === '/taverna' }"
+            :title="path === '/taverna' ? 'A taverna' : name"
+        >
+            <Icone :name="icon" />
+            <span class="sr-only">{{ path === "/taverna" ? "A taverna" : name }}</span>
         </RouterLink>
         <RouterLink class="rail-add" to="/campanhas" title="Criar campanha">
             <Icone name="plus" />
@@ -260,26 +260,16 @@ onMounted(() => executar(load))
             </RouterLink>
             <div class="sidebar-heading">SEU PONTO DE ENCONTRO</div>
             <nav class="main-menu" aria-label="Navegação principal">
-                <RouterLink to="/taverna" class="active" aria-current="page">
-                    <Icone name="hash" />
-                    taverna-geral
-                </RouterLink>
-                <RouterLink to="/descobrir">
-                    <Icone name="compass" />
-                    Descobrir jogadores
-                </RouterLink>
-                <RouterLink to="/campanhas">
-                    <Icone name="swords" />
-                    Campanhas
-                </RouterLink>
-                <RouterLink to="/mensagens">
-                    <Icone name="message-circle" />
-                    Mensagens
-                    <ContadorMensagens />
-                </RouterLink>
-                <RouterLink to="/comunidades">
-                    <Icone name="castle" />
-                    Comunidades
+                <RouterLink
+                    v-for="[path, name, icon] in links.slice(0, 5)"
+                    :key="path"
+                    :to="path"
+                    :class="{ active: path === '/taverna' }"
+                    :aria-current="path === '/taverna' ? 'page' : undefined"
+                >
+                    <Icone :name="icon" />
+                    {{ path === "/taverna" ? "taverna-geral" : name }}
+                    <ContadorMensagens v-if="path === '/mensagens'" />
                 </RouterLink>
             </nav>
             <div class="sidebar-heading">A PRÓXIMA SESSÃO</div>

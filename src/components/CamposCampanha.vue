@@ -3,32 +3,21 @@ import Input from "./input/Input.vue"
 const form = defineModel({ required: true })
 defineProps({ edit: Boolean, preview: String })
 const emit = defineEmits(["image", "remove-image"])
+const campos = [
+    ["nome", "editarNome", "Nome", { maxlength: 100 }],
+    ["sistema", "editarSistema", "Sistema", { maxlength: 100, placeholder: "Ex: D&D 5e" }],
+    ["descricao", "editarDescricao", "Descrição", { maxlength: 5000, multiline: true }],
+    ["maxJogadores", "editarLimite", "Quantidade máxima de jogadores", { type: "number", min: 2, max: 20 }]
+]
 </script>
 <template>
-    <Input :id="edit ? 'editarNome' : 'nome'" v-model="form.nome" label="Nome" required maxlength="100" />
     <Input
-        :id="edit ? 'editarSistema' : 'sistema'"
-        v-model="form.sistema"
-        label="Sistema"
-        placeholder="Ex: D&D 5e"
-        required
-        maxlength="100"
-    />
-    <Input
-        :id="edit ? 'editarDescricao' : 'descricao'"
-        v-model="form.descricao"
-        label="Descrição"
-        multiline
-        required
-        maxlength="5000"
-    />
-    <Input
-        :id="edit ? 'editarLimite' : 'maxJogadores'"
-        v-model="form.maxJogadores"
-        label="Quantidade máxima de jogadores"
-        type="number"
-        min="2"
-        max="20"
+        v-for="[nome, idEdicao, label, opcoes] in campos"
+        :key="nome"
+        :id="edit ? idEdicao : nome"
+        v-model="form[nome]"
+        :label="label"
+        v-bind="opcoes"
         required
     />
     <div class="campo">

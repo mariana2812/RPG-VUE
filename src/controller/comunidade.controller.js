@@ -1,4 +1,4 @@
-import { apiRequest } from "./service.controller.js"
+import { apiRequest, serviceController as api, query, record } from "./service.controller.js"
 import { abrirModal } from "../composables/useModal.js"
 export async function deleteByIdOrFilter(collection, id, filters = {}) {
     if (id != null && id !== "") {
@@ -31,6 +31,13 @@ export function isAcceptedFriendRelation(relation) {
     return !relation.status || relation.status === "accepted" || relation.status === "friend"
 }
 
+async function removerVinculos(colecoes, filtros) {
+    for (const colecao of colecoes) {
+        const itens = await api.get(query(colecao, filtros))
+        for (const item of itens) await api.remove(record(colecao, item.id))
+    }
+}
+
 export async function excluirCampanha(id) {
     const campanha = await apiRequest("/campaigns/" + encodeURIComponent(id))
     const idUsuario = localStorage.getItem("idUser")
@@ -38,12 +45,7 @@ export async function excluirCampanha(id) {
         throw new Error("Somente o mestre pode excluir esta campanha.")
     }
 
-    for (const collection of ["campaignPosts", "campaignMembers"]) {
-        const items = await apiRequest(`/${collection}?campaignId=${encodeURIComponent(id)}`)
-        for (const item of items) {
-            await apiRequest(`/${collection}/${encodeURIComponent(item.id)}`, { method: "DELETE" })
-        }
-    }
+    await removerVinculos(["campaignPosts", "campaignMembers"], { campaignId: id })
 
     return apiRequest("/campaigns/" + encodeURIComponent(id), { method: "DELETE" })
 }
@@ -80,13 +82,7 @@ export async function excluirPublicacao(id) {
     const post = await apiRequest("/blog/" + encodeURIComponent(id))
     if (String(post.userId ?? post.user?.id) !== localStorage.getItem("idUser"))
         throw new Error("Somente o autor pode excluir esta publicação.")
-    for (const colecao of ["likes", "comments"]) {
-        const itens = await apiRequest("/" + colecao + "?postId=" + encodeURIComponent(id))
-        for (const item of itens)
-            await apiRequest("/" + colecao + "/" + encodeURIComponent(item.id), {
-                method: "DELETE"
-            })
-    }
+    await removerVinculos(["likes", "comments"], { postId: id })
     await deleteByIdOrFilter("blog", id, { id })
 }
 
