@@ -6,7 +6,7 @@ Esta versão tem repositório e histórico próprios em <https://github.com/mari
 
 ## Executar
 
-É necessário Node.js 20 ou superior e o servidor original ligado na porta 3001.
+É necessário Node.js 20.19+, 22.12+ ou 24+ e o servidor original ligado na porta 3001.
 
 ```powershell
 cd C:\Users\mariana\RPG-VUE-refatorado
@@ -64,3 +64,18 @@ npm.cmd run format:check
 Os testes de navegador usam Chrome instalado e uma API simulada em memória. O servidor real não estava disponível durante a verificação (conexão recusada na porta 3001); por isso, a validação com seus dados reais depende de iniciar o backend. Eles não criam usuários nem alteram dados do servidor real. Se não houver Chrome, instale-o ou ajuste `channel` em `playwright.config.js` para um navegador disponível.
 
 Para disponibilizar o build, execute `npm.cmd run build` e sirva a pasta `dist`. A hospedagem precisa redirecionar as rotas da aplicação para `index.html`, pois a navegação usa `createWebHistory`.
+
+## Relação com as aulas
+
+A formatação usa quatro espaços de indentação e aspas duplas nos scripts. Os componentes seguem o padrão de `<script setup>` e `<template>` dos exemplos.
+
+- `components/Form.vue` usa props e slots, como o formulário apresentado na aula.
+- `components/input/Input.vue` recebe `modelValue` e emite a atualização do campo.
+- `components/FormularioAcesso.vue` reúne os campos comuns de login e cadastro.
+- `view` contém telas como `Perfil.vue`, `Campanhas.vue` e `Mensagens.vue`.
+- `controller/service.controller.js` e `controller/user.controller.js` mantêm a separação entre as telas e as chamadas HTTP.
+- `composables/useAcao.js` compartilha o estado de carregamento e o tratamento de erros para evitar repetir `try/catch` nos botões.
+
+As rotas, os campos enviados e a autenticação do JSON Server original continuam iguais. Login e cadastro compartilham o mesmo CSS, pois os dois arquivos anteriores eram idênticos.
+
+A configuração usa Vue 3 e Vite 8. Para iniciar a cópia aberta no editor, execute `npm.cmd run dev` na raiz `C:\Users\mariana\RPG-VUE`.
