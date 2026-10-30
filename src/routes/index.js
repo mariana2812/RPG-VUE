@@ -18,7 +18,7 @@ export const router = createRouter({
         page('/', 'Home', 'FrontD', () => import('../view/Home.vue'), homeCss),
         page('/login', 'Login', 'Login', () => import('../view/Login.vue'), loginCss),
         page('/cadastro', 'Register', 'Cadastro', () => import('../view/Register.vue'), registerCss),
-        page('/taverna', 'Tavern', 'A taverna', placeholder, feedCss + tavernCss),
+        page('/taverna', 'Tavern', 'A taverna', () => import('../view/Tavern.vue'), feedCss + tavernCss),
         page('/descobrir', 'Discover', 'Descobrir jogadores', () => import('../view/Discover.vue'), communityCss + navigationCss),
         page('/campanhas', 'Campaigns', 'Campanhas', () => import('../view/Campaigns.vue'), communityCss + navigationCss),
         page('/campanha', 'Campaign', 'Campanha', () => import('../view/Campaign.vue'), communityCss + navigationCss, '/campanhas'),
