@@ -1,4 +1,7 @@
 <script setup>
-import AuthForm from '../components/AuthForm.vue'
+import FormularioAcesso from "../components/FormularioAcesso.vue"
 </script>
-<template><AuthForm register /></template>
+
+<template>
+    <FormularioAcesso cadastro />
+</template>

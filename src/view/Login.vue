@@ -1,4 +1,4 @@
 <script setup>
-import AuthForm from '../components/AuthForm.vue'
+import FormularioAcesso from "../components/FormularioAcesso.vue"
 </script>
-<template><AuthForm /></template>
+<template><FormularioAcesso /></template>
