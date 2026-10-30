@@ -1,0 +1,4 @@
+#app { display: contents; }
+button:disabled { cursor: wait; }
+.mensagem:empty, .feed-message:empty { display: none; }
+.app-lateral svg, .topo svg { width: 20px; height: 20px; flex-shrink: 0; }

@@ -1,0 +1,201 @@
+body {
+    background:
+        radial-gradient(circle at top, rgba(217, 154, 72, 0.08), transparent 38%),
+        linear-gradient(180deg, #0b0b0d, #121417);
+}
+
+#editarPerfil {
+    background: linear-gradient(180deg, rgba(17, 17, 19, 0.98), rgba(12, 12, 14, 0.98));
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 18px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+    padding: 22px;
+}
+
+#editarPerfil h2,
+#sistemasCard h2,
+.card h2 {
+    color: #f5f3ee;
+    font-size: 20px;
+    margin-bottom: 18px;
+}
+
+#formPerfil {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.campo {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.campo label {
+    color: rgba(255, 255, 255, 0.76);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+}
+
+.campo input,
+.campo textarea,
+.campo select {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    color: #f5f3ee;
+    padding: 12px 14px;
+}
+
+#adicionarSistemaArea[hidden],
+#solicitacoesCard[hidden],
+#perfilPrivadoAviso[hidden],
+#campanhasCard[hidden] {
+    display: none;
+}
+
+.campo textarea {
+    min-height: 90px;
+    resize: vertical;
+}
+
+#avatarOpcoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 4px;
+}
+
+.avatar-escolha {
+    width: 62px;
+    height: 62px;
+    padding: 0;
+    border-radius: 16px;
+    border: 2px solid transparent;
+    background: rgba(255, 255, 255, 0.02);
+    overflow: hidden;
+    transition: 0.2s ease;
+}
+
+.avatar-escolha:hover {
+    transform: translateY(-2px);
+    border-color: rgba(217, 154, 72, 0.45);
+}
+
+.avatar-escolha img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 14px;
+}
+
+.avatar-escolha img.selecionado {
+    border: 2px solid var(--gold);
+    box-shadow: 0 0 0 4px rgba(217, 154, 72, 0.15);
+}
+
+#formPerfil .botao,
+#adicionarSistema,
+#acoesPerfil .botao,
+#postsPerfil .botao-perigo {
+    align-self: flex-start;
+}
+
+#sistemasCard {
+    background: linear-gradient(180deg, rgba(17, 17, 19, 0.98), rgba(12, 12, 14, 0.98));
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 18px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+    padding: 22px;
+}
+
+#adicionarSistemaArea {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+#nomeSistema {
+    flex: 1;
+    min-height: 44px;
+    padding: 0 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.02);
+    color: #fff;
+}
+
+#postsPerfil {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+#postsPerfil .item-lista {
+    justify-content: space-between;
+    gap: 12px;
+}
+
+#postsPerfil .item-info {
+    flex: 1;
+    color: #f3efe9;
+}
+
+#postsPerfil .item-info:hover {
+    color: var(--gold-light);
+}
+
+#solicitacoesPerfil,
+#campanhasPerfil {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#solicitacoesPerfil .item-lista,
+#campanhasPerfil .item-lista {
+    justify-content: space-between;
+    gap: 12px;
+}
+
+#solicitacoesPerfil .item-info,
+#campanhasPerfil .item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+#solicitacoesPerfil .acoes-seguidor {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+#acoesPerfil {
+    margin-top: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+@media (max-width: 650px) {
+    #editarPerfil,
+    #sistemasCard {
+        padding: 18px 14px;
+    }
+
+    #adicionarSistemaArea {
+        flex-direction: column;
+    }
+
+    #postsPerfil .item-lista {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #solicitacoesPerfil .item-lista,
+    #campanhasPerfil .item-lista {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
