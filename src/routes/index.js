@@ -23,7 +23,7 @@ export const router = createRouter({
         page('/campanhas', 'Campaigns', 'Campanhas', () => import('../view/Campaigns.vue'), communityCss + navigationCss),
         page('/campanha', 'Campaign', 'Campanha', () => import('../view/Campaign.vue'), communityCss + navigationCss, '/campanhas'),
         page('/comunidades', 'Communities', 'Comunidades', () => import('../view/Communities.vue'), communityCss + navigationCss),
-        page('/perfil', 'Profile', 'Perfil', placeholder, communityCss + profileCss + navigationCss),
+        page('/perfil', 'Profile', 'Perfil', () => import('../view/Profile.vue'), communityCss + profileCss + navigationCss),
         page('/mensagens', 'Messages', 'Mensagens', placeholder, communityCss + navigationCss),
         page('/configuracoes', 'Settings', 'Configurações', () => import('../view/Settings.vue'), communityCss + navigationCss),
         { path: '/Blog', redirect: '/taverna' }, { path: '/:pathMatch(.*)*', redirect: '/' }
