@@ -14,8 +14,7 @@ const communities = ref([]),
     expanded = ref(new Set())
 const name = ref(""),
     description = ref(""),
-    editing = ref(null),
-    nameField = ref(null)
+    editing = ref(null)
 const { carregando, mensagem, executar } = useAcao()
 const title = computed(() => (editing.value != null ? "Editar comunidade" : "Criar comunidade"))
 const owner = community => String(community.ownerId) === userId

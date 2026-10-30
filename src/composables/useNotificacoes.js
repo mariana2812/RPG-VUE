@@ -1,4 +1,4 @@
-import { ref, computed } from "vue"
+import { ref } from "vue"
 import { serviceController as api, record } from "../controller/service.controller.js"
 import { sessao } from "../controller/user.controller.js"
 export const solicitacoesPendentes = ref([])
@@ -27,7 +27,6 @@ export function contarNaoLidas(type, id) {
                     : item.communityId == null && String(item.senderId) === String(id)))
     ).length
 }
-export const totalNaoLidas = computed(() => contarNaoLidas())
 export function atualizarResumoMensagens(messages, communityIds) {
     const id = sessao.userId
     mensagensRecebidas.value = messages.filter(
