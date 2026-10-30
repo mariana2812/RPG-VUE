@@ -31,7 +31,7 @@ export function markRead(messages) {
 }
 export async function responderSolicitacao(id, accept) {
     const request = await api.get(record('friends', id))
-    if (String(request.friendId) !== session.userId || request.status !== 'pending') throw new Error('Esta solicita??o n?o est? mais dispon?vel.')
+    if (String(request.friendId) !== session.userId || request.status !== 'pending') throw new Error('Esta solicitação não está mais disponível.')
     if (accept) await api.patch(record('friends', id), { status: 'accepted' })
     else await api.remove(record('friends', id))
     pendingRequests.value = pendingRequests.value.filter(item => String(item.id) !== String(id))
@@ -57,7 +57,7 @@ export function startNotifications() {
             const ids = new Set(communities.filter(item => String(item.ownerId) === id || members.some(member => String(member.communityId) === String(item.id) && String(member.userId) === id)).map(item => String(item.id)))
             updateMessageSummary(messages, ids)
             pendingRequests.value = relations.filter(item => item.status === 'pending' && String(item.friendId) === id)
-        } catch (error) { console.warn('N?o foi poss?vel atualizar as notifica??es.', error.message) }
+        } catch (error) { console.warn('Não foi poss?vel atualizar as notificações.', error.message) }
         finally { checking = false }
     }
     const visible = () => { if (!document.hidden) refresh() }

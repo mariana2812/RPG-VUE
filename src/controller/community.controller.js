@@ -112,7 +112,7 @@ export async function editarPublicacao(id) {
 
 
 export const privado = (usuario) => usuario?.privado === true || usuario?.privado === 'true'
-export const nomeUsuario = (usuario) => usuario?.nome || usuario?.username || usuario?.email || 'Usu?rio'
+export const nomeUsuario = (usuario) => usuario?.nome || usuario?.username || usuario?.email || 'Usuário'
 export const avatarUsuario = (usuario, estilo = 'bottts') => usuario?.avatar || 'https://api.dicebear.com/9.x/' + estilo + '/svg?seed=' + encodeURIComponent(nomeUsuario(usuario))
 export const relacaoEntre = (relacao, a, b) =>
     (String(relacao.userId) === String(a) && String(relacao.friendId) === String(b)) ||

@@ -23,7 +23,7 @@ function submit() {
         <div><label for="email">Email</label><input id="email" v-model="data.email" type="email" name="email" autocomplete="email" placeholder="Digite seu email" required></div>
         <div><label for="senha">Senha</label><input id="senha" v-model="data.password" type="password" name="senha" :autocomplete="register ? 'new-password' : 'current-password'" placeholder="Digite sua senha" required></div>
         <button type="submit" :disabled="busy">{{ register ? 'Cadastrar' : 'Entrar' }}</button>
-        <RouterLink :to="register ? '/login' : '/cadastro'">{{ register ? 'J? possui uma conta? Entre' : 'Ainda n?o tem uma conta? Cadastre-se' }}</RouterLink>
+        <RouterLink :to="register ? '/login' : '/cadastro'">{{ register ? 'Já possui uma conta? Entre' : 'Ainda não tem uma conta? Cadastre-se' }}</RouterLink>
         <p id="message" role="status">{{ message }}</p>
     </form>
 </template>

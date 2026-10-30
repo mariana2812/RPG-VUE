@@ -7,7 +7,7 @@ export function useAction() {
         busy.value = true
         message.value = ''
         try { return await action() }
-        catch (error) { message.value = error.message || 'N?o foi poss?vel concluir a opera??o.' }
+        catch (error) { message.value = error.message || 'Não foi poss?vel concluir a operação.' }
         finally { busy.value = false }
     }
     return { busy, message, run }

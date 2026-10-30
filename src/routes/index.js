@@ -19,13 +19,13 @@ export const router = createRouter({
         page('/login', 'Login', 'Login', () => import('../view/Login.vue'), loginCss),
         page('/cadastro', 'Register', 'Cadastro', () => import('../view/Register.vue'), registerCss),
         page('/taverna', 'Tavern', 'A taverna', placeholder, feedCss + tavernCss),
-        page('/descobrir', 'Discover', 'Descobrir jogadores', placeholder, communityCss + navigationCss),
-        page('/campanhas', 'Campaigns', 'Campanhas', placeholder, communityCss + navigationCss),
-        page('/campanha', 'Campaign', 'Campanha', placeholder, communityCss + navigationCss, '/campanhas'),
-        page('/comunidades', 'Communities', 'Comunidades', placeholder, communityCss + navigationCss),
+        page('/descobrir', 'Discover', 'Descobrir jogadores', () => import('../view/Discover.vue'), communityCss + navigationCss),
+        page('/campanhas', 'Campaigns', 'Campanhas', () => import('../view/Campaigns.vue'), communityCss + navigationCss),
+        page('/campanha', 'Campaign', 'Campanha', () => import('../view/Campaign.vue'), communityCss + navigationCss, '/campanhas'),
+        page('/comunidades', 'Communities', 'Comunidades', () => import('../view/Communities.vue'), communityCss + navigationCss),
         page('/perfil', 'Profile', 'Perfil', placeholder, communityCss + profileCss + navigationCss),
         page('/mensagens', 'Messages', 'Mensagens', placeholder, communityCss + navigationCss),
-        page('/configuracoes', 'Settings', 'Configura??es', () => import('../view/Settings.vue'), communityCss + navigationCss),
+        page('/configuracoes', 'Settings', 'Configurações', () => import('../view/Settings.vue'), communityCss + navigationCss),
         { path: '/Blog', redirect: '/taverna' }, { path: '/:pathMatch(.*)*', redirect: '/' }
     ],
     scrollBehavior(to) { return to.hash ? { el: to.hash, behavior: 'smooth' } : { top: 0 } }
